@@ -1,8 +1,12 @@
 <div align="center">
+
 # RTMate
-</div>
 
 WebSocket Gateway MVP
+
+
+</div>
+
 ## Overview
 This is a minimal viable product (MVP) for a WebSocket gateway service built with Rust and Axum. The current implementation provides basic WebSocket connectivity with message broadcasting capabilities.
 
