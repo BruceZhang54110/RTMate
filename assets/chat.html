@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 广播测试</title>
+    <style>
+        body { max-width: 800px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif; }
+        .chat-container { border: 1px solid #ccc; border-radius: 8px; padding: 10px; height: 400px; overflow-y: auto; margin-bottom: 10px; }
+        .message { margin: 5px 0; padding: 8px; border-radius: 4px; }
+        .local-message { background-color: #e3f2fd; text-align: right; }
+        .remote-message { background-color: #f5f5f5; text-align: left; }
+        .input-area { display: flex; gap: 10px; }
+        #message-input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 16px; background-color: #2196f3; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        .status { color: #666; margin-bottom: 10px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>WebSocket 广播测试</h1>
+    <div class="status">状态: <span id="connection-status">未连接</span></div>
+    <div class="chat-container" id="chat-messages"></div>
+    <div class="input-area">
+        <input type="text" id="message-input" placeholder="输入消息后按回车或点击发送">
+        <button id="send-btn">发送</button>
+    </div>
+
+    <script>
+        // 连接状态和WebSocket实例
+        let ws;
+        const statusElement = document.getElementById('connection-status');
+        const messagesElement = document.getElementById('chat-messages');
+        const inputElement = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-btn');
+
+        // 初始化WebSocket连接
+        function connect() {
+            // 连接到后端WebSocket服务（根据实际地址修改）
+            ws = new WebSocket('ws://127.0.0.1:3000/ws');
+
+
+            // 连接成功
+            ws.onopen = () => {
+                statusElement.textContent = '已连接（可发送消息）';
+                statusElement.style.color = 'green';
+                sendButton.disabled = false;
+                inputElement.disabled = false;
+                inputElement.focus();
+            };
+
+            // 接收消息（广播的消息）
+            ws.onmessage = (event) => {
+                const message = event.data;
+                const isLocal = false; // 收到的消息都是其他客户端发送的（本地消息会单独处理）
+                addMessageToChat(message, isLocal);
+            };
+
+            // 连接关闭
+            ws.onclose = () => {
+                statusElement.textContent = '连接已关闭（3秒后自动重连）';
+                statusElement.style.color = 'red';
+                sendButton.disabled = true;
+                inputElement.disabled = true;
+                // 自动重连
+                setTimeout(connect, 3000);
+            };
+
+            // 连接错误
+            ws.onerror = (error) => {
+                statusElement.textContent = `错误: ${error}`;
+                statusElement.style.color = 'red';
+            };
+        }
+
+        // 发送消息
+        function sendMessage() {
+            const message = inputElement.value.trim();
+            if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            // 发送消息到服务器（会被广播给所有客户端）
+            ws.send(message);
+            // 本地消息直接显示（无需等待服务器广播回来）
+            addMessageToChat(message, true);
+            inputElement.value = '';
+        }
+
+        // 添加消息到聊天窗口
+        function addMessageToChat(text, isLocal) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isLocal ? 'local-message' : 'remote-message'}`;
+            messageDiv.textContent = text;
+            messagesElement.appendChild(messageDiv);
+            // 滚动到底部
+            messagesElement.scrollTop = messagesElement.scrollHeight;
+        }
+
+        // 绑定事件
+        sendButton.addEventListener('click', sendMessage);
+        inputElement.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+
+        // 页面加载时连接
+        window.onload = connect;
+    </script>
+</body>
+</html>

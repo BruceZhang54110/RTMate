@@ -4,9 +4,9 @@ use axum::{
         State,
     }, http::{StatusCode, Version}, response::{Html, IntoResponse}, routing::any, Router
 };
-use std::{net::SocketAddr, path::PathBuf};
+use std::net::SocketAddr;
 use tokio::sync::broadcast;
-use tower_http::{services::ServeDir, trace::{DefaultMakeSpan, TraceLayer}};
+use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -22,7 +22,7 @@ async fn main() {
     // let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
 
 
-    // build our application with some routes
+    // 设置路由，也就是路径地址
     let app = Router::new()
         .fallback(handle_404)
         //.fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
