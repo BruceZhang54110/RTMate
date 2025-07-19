@@ -2,13 +2,13 @@
 
 # RTMate
 
-WebSocket Gateway MVP
+WebSocket Service MVP
 
 
 </div>
 
 ## Overview
-This is a minimal viable product (MVP) for a WebSocket gateway service built with Rust and Axum. The current implementation provides basic WebSocket connectivity with message broadcasting capabilities.
+This is a minimal viable product (MVP) for a WebSocket Service service built with Rust and Axum. The current implementation provides basic WebSocket connectivity with message broadcasting capabilities.
 
 ## Features
 - Current MVP Features
