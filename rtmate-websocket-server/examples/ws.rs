@@ -63,8 +63,9 @@ async fn ws_handler(
                 res = ws.recv() => {
                     match res {
                         Some(Ok(ws::Message::Text(s))) => {
-                            tracing::debug!("accepted a WebSocket message {s:?}");
-                            let _ = sender.send(s.to_string());
+                            let message = s.to_string();
+                            tracing::debug!("accepted a WebSocket message from Client {message:?}");
+                            let _ = sender.send(message);
                         }
                         Some(Ok(_)) => {}
                         Some(Err(e)) => tracing::debug!("client disconnected abruptly: {e}"),
@@ -74,8 +75,13 @@ async fn ws_handler(
                 // Tokio guarantees that `broadcast::Receiver::recv` is cancel-safe.
                 res = receiver.recv() => {
                     match res {
-                        Ok(msg) => if let Err(e) = ws.send(ws::Message::Text(msg.into())).await {
+                        Ok(mut msg) => {
+                            tracing::debug!("accepted a WebSocket broadcast message {msg:?}");
+                            msg = format!("{} {}", msg, "from broadcast");
+                            if let Err(e) = ws.send(ws::Message::Text(msg.into())).await {
                             tracing::debug!("client disconnected abruptly: {e}");
+                            }
+
                         }
                         Err(_) => continue,
                     }
