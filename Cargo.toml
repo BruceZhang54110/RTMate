@@ -4,7 +4,7 @@ resolver = "2"
 
 members = [
     "rtmate-auth",
-    "rtmate-websocket-server"
+    "rtmate-server"
 ]
 
 [workspace.dependencies]
