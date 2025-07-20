@@ -4,10 +4,13 @@ use axum::{
         State,
     }, http::{StatusCode, Version}, response::{Html, IntoResponse}, routing::any, Router
 };
-use std::net::SocketAddr;
+use std::{env, net::SocketAddr, path::PathBuf};
 use tokio::sync::broadcast;
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use axum_server::tls_rustls::RustlsConfig;
+
+
 
 #[tokio::main]
 async fn main() {
@@ -19,13 +22,24 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    // let assets_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets");
+    // configure certificate and private key used by https
+    let cert_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("self_signed_certs")
+        .join("cert.pem");
+
+    let key = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("self_signed_certs")
+        .join("key.pem");
+
+    tracing::debug!("cert path is:{:?}, key path is {:?}", cert_path, key);
+
+    let config = RustlsConfig::from_pem_file(cert_path, key).await.unwrap();
+
 
 
     // 设置路由，也就是路径地址
     let app = Router::new()
         .fallback(handle_404)
-        //.fallback_service(ServeDir::new(assets_dir).append_index_html_on_directories(true))
         .route("/ws", any(ws_handler))
         // logging so we can see what's going on
         .layer(
@@ -35,19 +49,20 @@ async fn main() {
         .with_state(broadcast::channel::<String>(16).0);
     // run it with hyper
 
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
-        .await
-        .unwrap();
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
+    tracing::debug!("listening on {}", addr);
 
+    let mut server = axum_server::bind_rustls(addr, config);
 
-    axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .await
-    .unwrap();
+    // IMPORTANT: This is required to advertise our support for HTTP/2 websockets to the client.
+    // If you use axum::serve, it is enabled by default.
+    server.http_builder().http2().enable_connect_protocol();
+
+    server.serve(app.into_make_service()).await.unwrap();
+
 }
+
+
 
 async fn ws_handler(
     ws: WebSocketUpgrade,
