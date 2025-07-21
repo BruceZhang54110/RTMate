@@ -9,6 +9,8 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use axum_server::tls_rustls::RustlsConfig;
 use axum::extract::ws::WebSocket;
 
+use rtmate_server::req::RequestParam;
+
 
 /// Websocket service main startup
 #[tokio::main]
@@ -74,6 +76,8 @@ async fn ws_handler(
                     match res {
                         Some(Ok(ws::Message::Text(s))) => {
                             let message = s.to_string();
+                            //let rep_param: RequestParam = serde_json::from_str(&s);
+                            
                             tracing::debug!("accepted a WebSocket message from Client {message:?}");
                             //let _ = sender.send(message);
                         }
