@@ -1,5 +1,7 @@
 pub mod req;
 
+pub mod handler;
+
 
 #[cfg(test)]
 mod tests {

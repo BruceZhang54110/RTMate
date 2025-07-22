@@ -13,4 +13,4 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter"] }
 serde_json = { workspace = true }
 serde = {workspace = true, features = ["derive"] }
- 
+anyhow = { workspace = true }

@@ -1,4 +1,5 @@
 use axum::{
+    http::HeaderMap,
     extract::{
         ws::{self, WebSocketUpgrade},
         }, http::{StatusCode, Version}, response::{Html, IntoResponse}, routing::any, Router
@@ -7,10 +8,8 @@ use std::{env, net::SocketAddr, path::PathBuf};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use axum_server::tls_rustls::RustlsConfig;
-use axum::extract::ws::WebSocket;
 
-use rtmate_server::req::RequestParam;
-
+use rtmate_server::handler;
 
 /// Websocket service main startup
 #[tokio::main]
@@ -65,8 +64,10 @@ async fn main() {
 async fn ws_handler(
     ws: WebSocketUpgrade,
     version: Version,
+    headers: HeaderMap
 ) -> axum::response::Response {
     tracing::debug!("accepted a WebSocket using {version:?}");
+    tracing::debug!("accepted a WebSocket Header using {headers:?}");
     // 升级为 WebSocket 连接
     ws.on_upgrade(|mut ws| async move {
         loop {
@@ -75,12 +76,13 @@ async fn ws_handler(
                 res = ws.recv() => {
                     match res {
                         Some(Ok(ws::Message::Text(s))) => {
-                            let message = s.to_string();
-                            //let rep_param: RequestParam = serde_json::from_str(&s);
+                            let websocket_msg = s.to_string();
+                            if let Err(e) = handler::handle_msg(&websocket_msg) {
+                                panic!("e:{}", e);
+                            }
+                            // let rep_param: RequestParam = serde_json::from_str(&s);
                             
-                            tracing::debug!("accepted a WebSocket message from Client {message:?}");
-                            //let _ = sender.send(message);
-                        }
+                            tracing::debug!("accepted a WebSocket message from Client {websocket_msg:?}");                        }
                         Some(Ok(ws::Message::Ping(ping_byte))) => {
                             if let Err(e) = ws.send(ws::Message::Pong(ping_byte)).await {
                                 tracing::debug!("failed to send Pong message: {e}");
@@ -102,9 +104,8 @@ async fn ws_handler(
     })
 }
 
-async fn handle_socket(mut socket: WebSocket, who: SocketAddr) {
 
-}
+
 
 // 404 处理函数
 async fn handle_404() -> impl IntoResponse {
