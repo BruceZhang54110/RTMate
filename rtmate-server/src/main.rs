@@ -77,15 +77,21 @@ async fn ws_handler(
                     match res {
                         Some(Ok(ws::Message::Text(s))) => {
                             let websocket_msg = s.to_string();
-                            if let Err(e) = handler::handle_msg(&websocket_msg) {
-                                panic!("e:{}", e);
+                            match handler::handle_msg(&websocket_msg) {
+                                Err(e) => {
+                                    let err_msg = format!("处理消息发生异常：{}", e);
+                                    if let Err(e) = ws.send(ws::Message::Text(err_msg.into())).await {
+                                        tracing::debug!("failed to send message from server: {e}");
+                                    }
+                                }
+                                Ok(_) => {
+                                    tracing::debug!("receive message success from client");
+                                }
                             }
-                            // let rep_param: RequestParam = serde_json::from_str(&s);
-                            
-                            tracing::debug!("accepted a WebSocket message from Client {websocket_msg:?}");                        }
+                        }
                         Some(Ok(ws::Message::Ping(ping_byte))) => {
                             if let Err(e) = ws.send(ws::Message::Pong(ping_byte)).await {
-                                tracing::debug!("failed to send Pong message: {e}");
+                                tracing::debug!("failed to send Pong message from server: {e}");
                                 break; // 发送失败，认为连接已断开
                             }
                         }

@@ -2,6 +2,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "event", content = "payload", rename_all = "camelCase")]
+pub enum RequestEvent {
+    Subscribe(SubscribePayload),
+    MessageSend(MessageSendPayload),
+    Auth()
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 将 Rust 的 snake_case 字段映射到 JSON 的 camelCase
 pub struct SubscribePayload {
@@ -35,11 +44,4 @@ pub struct RequestParam {
     #[serde(default = "HashMap::new")]
     #[serde(skip_serializing_if = "HashMap::is_empty")] 
     pub metadata: HashMap<String, serde_json::Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "event", content = "payload", rename_all = "camelCase")]
-pub enum RequestEvent {
-    Subscribe(SubscribePayload),
-    MessageSend(MessageSendPayload),
 }

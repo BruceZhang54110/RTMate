@@ -1,4 +1,4 @@
-const socket = new WebSocket('ws://127.0.0.1:3000/ws');
+const socket = new WebSocket('wss://127.0.0.1:3000/ws');
 
 socket.addEventListener('message', e => {
     document.getElementById("messages").append(e.data, document.createElement("br"));
