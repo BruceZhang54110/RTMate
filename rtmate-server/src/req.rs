@@ -1,14 +1,37 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
+use serde::Deserializer;
 
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "event", content = "payload", rename_all = "camelCase")]
 pub enum RequestEvent {
+    Auth(AuthPayload),
     Subscribe(SubscribePayload),
     MessageSend(MessageSendPayload),
-    Auth()
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")] // 将 Rust 的 snake_case 字段映射到 JSON 的 camelCase
+pub struct AuthPayload {
+    // 频道id
+    #[serde(deserialize_with = "not_empty_string")]
+    pub app_id: String,
+    // 主题
+    #[serde(deserialize_with = "not_empty_string")]
+    pub token: String,
+}
+
+/// 自定义反序列化函数，确保字段不为空字符串
+fn not_empty_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = String::deserialize(deserializer)?;
+    if s.is_empty() {
+        return Err(serde::de::Error::custom("字段不能是空字符串"));
+    }
+    Ok(s)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

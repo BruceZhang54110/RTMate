@@ -47,4 +47,23 @@ mod tests {
         println!("{:?}", param);
     }
 
+    /// 测试 auth payload json
+    #[test]
+    fn test_message_auth_payload_json() {
+        let json = r#"
+            {
+                "event": "auth",
+                "payload": {
+                    "appId": "",
+                    "token": ""
+                },
+                "metadata": {
+                    "requestId": "sub_req_001"
+                }
+            }
+        "#;
+        let param: req::RequestParam = serde_json::from_str(json).unwrap();
+        println!("{:?}", param);
+    }
+
 }
