@@ -1,6 +1,6 @@
 pub mod req;
-
 pub mod handler;
+pub mod store;
 
 
 #[cfg(test)]
@@ -54,8 +54,9 @@ mod tests {
             {
                 "event": "auth",
                 "payload": {
-                    "appId": "",
-                    "token": ""
+                    "appId": "dd111d",
+                    "token": "sdsdf",
+                    "timestamp": 1753459770000
                 },
                 "metadata": {
                     "requestId": "sub_req_001"
@@ -64,6 +65,14 @@ mod tests {
         "#;
         let param: req::RequestParam = serde_json::from_str(json).unwrap();
         println!("{:?}", param);
+    }
+
+    #[test]
+    fn test_store() {
+        let mut store = store::Store::new();
+        store.insert("app1".to_string(), "key1".to_string());
+        assert_eq!(store.get("app1"), Some(&"key1".to_string()));
+        assert_eq!(store.get("app2"), None);
     }
 
 }
