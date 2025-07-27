@@ -4,35 +4,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-axum = { workspace = true }
-tokio = { workspace = true }
-tower-http = { workspace = true }
+axum = { workspace = true, features = ["http2", "ws", "tokio"] }
+axum-server = { workspace = true, features = ["tls-rustls"] }
+tokio = { workspace = true, features = ["full"] }
+tokio-tungstenite = { workspace = true}
+tower-http = { workspace = true, features = ["fs", "trace"] }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-
-# JWT 相关
-jsonwebtoken = "9.2"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-
-# 密码哈希
-bcrypt = "0.15"
-
-# 数据库
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono"] }
-
-# 时间处理
-chrono = { version = "0.4", features = ["serde"] }
-
-# UUID
-uuid = { version = "1.0", features = ["v4", "serde"] }
-
-# 环境变量
-dotenv = "0.15"
-
-# 错误处理
-anyhow = "1.0"
-thiserror = "1.0"
-
-# HTTP 客户端
-reqwest = { version = "0.11", features = ["json"] }
+tracing-subscriber = { workspace = true, features = ["env-filter"] }
+serde_json = { workspace = true }
+serde = {workspace = true, features = ["derive"] }
+anyhow = { workspace = true }
