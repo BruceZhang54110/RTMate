@@ -14,16 +14,15 @@ pub enum RequestEvent {
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")] // 将 Rust 的 snake_case 字段映射到 JSON 的 camelCase
 pub struct AuthPayload {
-    // 频道id
+    // app_id
     #[serde(deserialize_with = "not_empty_string")]
     pub app_id: String,
     // token
     #[serde(deserialize_with = "not_empty_string")]
     pub token: String,
-
+    // 签名
     #[serde(deserialize_with = "not_empty_string")]
     pub signature: String,
-
     // 时间戳
     pub timestamp: u64,
 }

@@ -1778,13 +1778,17 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-server",
+ "hex",
+ "hmac",
  "serde",
  "serde_json",
+ "sha2",
  "tokio",
  "tokio-tungstenite",
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

@@ -13,10 +13,10 @@ impl Store {
     }
 
     pub fn insert(&mut self, app_id: String, app_key: String) {
-        self.data.insert(app_id, app_key);
+        let _ = &self.data.insert(app_id, app_key);
     }
 
-    pub fn get(&mut self, app_id: &str) -> Option<&String> {
+    pub fn get(&self, app_id: &str) -> Option<&String> {
         self.data.get(app_id)
     }
     

@@ -36,7 +36,7 @@ fn process_event(event: RequestEvent, websocket_msg: &str) -> anyhow::Result<()>
                 .with_context(|| format!("处理发送消息失败:{}", websocket_msg))
         }
         RequestEvent::Auth(payload) => {
-            handle_auth_app(payload)
+            handle_auth_app(payload, &Store::new())
                 .with_context(|| format!("处理认证消息失败:{}", websocket_msg))
         }
     }
@@ -53,9 +53,8 @@ fn handle_send_msg(payload: MessageSendPayload) -> anyhow::Result<()> {
 }
 
 /// 处理应用认证，使用 hmac_sha256 算法进行签名验证
-fn handle_auth_app(payload: AuthPayload) -> anyhow::Result<()> {
+pub fn handle_auth_app(payload: AuthPayload, store: &Store) -> anyhow::Result<()> {
     // 从数据库中获取 appKey
-    let mut store = Store::new();
     
     let app_key = store.get(&payload.app_id)
         .ok_or_else(|| anyhow::anyhow!("appId not found in store"))?;
@@ -67,11 +66,12 @@ fn handle_auth_app(payload: AuthPayload) -> anyhow::Result<()> {
     let server_sign = mac.finalize().into_bytes();
 
     // 假设 signature 是十六进制字符串
+    println!("client_sign_hex_decode: {:?}", hex::decode(&payload.signature));
     let client_sign = hex::decode(&payload.signature)
         .map_err(|_| anyhow::anyhow!("signature decode failed"))?;
 
     if server_sign.as_slice() == client_sign.as_slice() {
-        tracing::debug!("auth success");
+        tracing::debug!("auth signature success, server_sign: {}, client_sign: {}", hex::encode(server_sign), &payload.signature);
     } else {
         return Err(anyhow::anyhow!("auth failed, server_sign: {}, client_sign: {}", hex::encode(server_sign), &payload.signature));
     }
