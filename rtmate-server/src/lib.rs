@@ -66,7 +66,8 @@ mod tests {
                 "payload": {
                     "appId": "dd111d",
                     "token": "sdsdf",
-                    "timestamp": 1753459770000
+                    "timestamp": 1753459770000,
+                    "signature": "d4f5e6b7c8d9e0f1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0t1u2v3w4x"
                 },
                 "metadata": {
                     "requestId": "sub_req_001"
