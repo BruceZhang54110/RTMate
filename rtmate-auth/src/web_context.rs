@@ -4,6 +4,9 @@ use axum::routing::get;
 use axum::routing::MethodRouter;
 use crate::service::auth_token;
 
+
+
+
 async fn root() -> &'static str {
     "RTMate Auth Service test"
 }

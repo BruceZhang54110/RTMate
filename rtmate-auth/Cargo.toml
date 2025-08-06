@@ -15,3 +15,6 @@ serde_json = { workspace = true }
 serde = {workspace = true, features = ["derive"] }
 anyhow = { workspace = true }
 tokio-postgres = { workspace = true }
+deadpool-postgres = { workspace = true, features = ["serde"] }
+config = { workspace = true }
+dotenvy = {workspace = true }
