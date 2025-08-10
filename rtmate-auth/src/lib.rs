@@ -7,11 +7,11 @@ pub mod dao;
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+    use crate::dao::Dao;
 
     #[tokio::test]
     async fn test_dao() {
-        let dao = dao::Dao::new().await.unwrap();
+        let dao = Dao::new().await.unwrap();
         let res = dao.query().await.unwrap();
         println!("res: {}", res);
     }
