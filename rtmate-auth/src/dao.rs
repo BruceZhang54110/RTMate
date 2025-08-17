@@ -1,6 +1,8 @@
 
 use anyhow::Ok;
 use diesel::sql_types::Text;
+use diesel::ExpressionMethods;
+use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use serde::Deserialize;
 use config::ConfigError;
@@ -12,6 +14,11 @@ use deadpool_diesel::postgres::Pool;
 use deadpool_diesel::Timeouts;
 use diesel::dsl::sql;
 use diesel::QueryResult;
+use diesel::SelectableHelper;
+
+use crate::models::RtApp;
+use crate::schema::rt_app::dsl::*;
+
 
 
 #[derive(Debug, Deserialize)]
@@ -118,6 +125,24 @@ impl Dao {
         }).await;
         query_result.map_err(|e| anyhow::anyhow!("Query failed: {}", e))?
         .map_err(|e| anyhow::anyhow!("Query failed: {}", e))
+    }
+
+    pub async fn query_all_rt_app(&self) -> anyhow::Result<()> {
+        let pg_connection = self.data_source.pool.get().await?;
+        let _r = pg_connection.interact(|conn: &mut diesel::PgConnection| {
+            let results = rt_app.limit(5)
+                .filter(app_id.eq("dd"))
+                .select(RtApp::as_select())
+                .load(conn).expect("Error loading rt_app");
+            println!("Number of apps: {}", results.len());
+            for app in results {
+                println!("App ID: {}, App Key: {}", app.app_id, app.app_key);
+            }
+        }).await;
+        
+        Ok(())
+
+
     }
 
 }

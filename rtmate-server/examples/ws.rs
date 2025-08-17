@@ -11,7 +11,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use axum_server::tls_rustls::RustlsConfig;
 
 
-
 #[tokio::main]
 async fn main() {
     tracing_subscriber::registry()
@@ -21,6 +20,7 @@ async fn main() {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
 
     // configure certificate and private key used by https
     let cert_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
