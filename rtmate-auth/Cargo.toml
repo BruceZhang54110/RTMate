@@ -22,3 +22,4 @@ deadpool-diesel = { workspace = true, features = ["postgres"]}
 thiserror = "2.0.12"
 diesel = { workspace = true, features = ["postgres", "chrono"]}
 chrono = "0.4.41"
+uuid = { workspace = true, features = ["v4", "serde"] }
