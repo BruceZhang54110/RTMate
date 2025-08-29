@@ -1,10 +1,12 @@
 use diesel::Selectable;
 use diesel::Queryable;
+use serde::Deserialize;
+use serde::Serialize;
 use crate::schema::rt_app;
 use chrono::Utc;
 use chrono::DateTime;
 
-#[derive(Queryable, Selectable)]
+#[derive(Queryable, Selectable,Deserialize, Serialize, Debug)]
 #[diesel(table_name = rt_app)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct RtApp {

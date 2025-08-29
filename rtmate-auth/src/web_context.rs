@@ -7,10 +7,11 @@ use axum::routing::MethodRouter;
 use crate::dao::Dao;
 use crate::service::auth_token;
 
-struct WebContext {
+#[derive(Clone)]
+pub struct WebContext {
 
     // 数据源
-    dao: Dao,
+    pub dao: Dao,
 }
 
 impl WebContext {
@@ -29,7 +30,7 @@ async fn root() -> &'static str {
 /// web服务初始化
 pub async fn startup() {
     // 初始化日志
-    let web_context: Arc<WebContext> = Arc::new(WebContext::new().await.unwrap());
+    let web_context = WebContext::new().await.unwrap().into();
     // 创建路由
     let app = init_router();
     // 创建API路由

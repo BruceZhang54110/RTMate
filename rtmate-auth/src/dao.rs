@@ -2,6 +2,7 @@
 use anyhow::Ok;
 use diesel::sql_types::Text;
 use diesel::ExpressionMethods;
+use diesel::OptionalExtension;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
 use serde::Deserialize;
@@ -79,6 +80,7 @@ pub enum PoolError {
     PoolBuildError(BuildError),
 }
 
+#[derive(Clone)]
 pub struct DataSource {
     pool: deadpool_diesel::Pool<deadpool_diesel::Manager<diesel::PgConnection>>,
 }
@@ -107,6 +109,7 @@ impl DataSource {
 
 }
 
+#[derive(Clone)]
 pub struct Dao {
     data_source: DataSource,
 }
@@ -142,7 +145,19 @@ impl Dao {
         
         Ok(())
 
+    }
 
+    pub async fn get_rt_app_by_app_id(&self, query_app_id: &str) -> anyhow::Result<Option<RtApp>> {
+        let pg_connection = self.data_source.pool.get().await?;
+        let query_app_id = query_app_id.to_owned();
+        let result = pg_connection.interact(move |conn: &mut diesel::PgConnection| {
+            rt_app
+                .filter(app_id.eq(query_app_id))
+                .select(RtApp::as_select())
+                .first::<RtApp>(conn)
+                .optional()
+        }).await.map_err(|e| anyhow::anyhow!("Query failed: {}", e))??;
+        Ok(result)
     }
 
 }

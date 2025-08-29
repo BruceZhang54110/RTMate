@@ -1,8 +1,3 @@
-//! Run with
-//!
-//! ```not_rust
-//! cargo run -p example-dependency-injection
-//! ```
 
 use std::{
     collections::HashMap,
