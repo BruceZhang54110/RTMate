@@ -5,6 +5,7 @@ pub mod dao;
 pub mod schema;
 pub mod models;
 pub mod common;
+pub mod dto;
 
 
 #[cfg(test)]

@@ -29,3 +29,6 @@ dotenvy = "0.15.7"
 deadpool-diesel = "0.6.1"
 thiserror = "2.0.12"
 diesel = "2.2.12"
+chrono = "0.4.41"
+jsonwebtoken = "9.3.1"
+

@@ -23,9 +23,6 @@ impl WebContext {
 }
 
 
-async fn root() -> &'static str {
-    "RTMate Auth Service test"
-}
 
 /// web服务初始化
 pub async fn startup() {

@@ -77,8 +77,12 @@ impl<T> RtResponse<T> {
 
 
 pub enum BizError {
+    // 应用未找到
     AppNotFound,
-    InvalidParams
+    // 参数错误
+    InvalidParams,
+    // 非法签名
+    InvalidSignature,
 }
 
 impl From<BizError> for AppError {
@@ -93,7 +97,12 @@ impl From<BizError> for AppError {
                 code: 400,
                 message: "参数错误".to_string(),
                 source: None,
-            }
+            },
+            BizError::InvalidSignature => AppError {
+                code: 1005,
+                message: "签名验证失败，请检查您的请求是否合法".to_string(),
+                source: None,
+            },
         }
     }
 }
