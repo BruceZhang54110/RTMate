@@ -14,6 +14,7 @@ where
 {
     fn from(value: E) -> Self {
         let source = value.into();
+        tracing::error!("Internal error: {:?}", source);
         AppError {
             code: 500, // 500 表示服务器异常
             message: "系统内部错误".to_string(),

@@ -35,8 +35,9 @@ pub async fn startup() {
         , MethodRouterExtension::new("/api/auth/token"
             , post(auth_token)));
     let app = app.with_state(web_context);
-    println!("RTMate Auth Service started");    // 启动服务
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    tracing::info!("RTMate Auth Service started");    // 启动服务
+
     axum::serve(listener, app).await.unwrap();
 
 }
