@@ -5,6 +5,7 @@ use serde::{Serialize};
 pub struct AppError {
     pub code: i32,
     pub message: String,
+    // 用于调试内部错误
     pub source: Option<anyhow::Error>,
 }
 

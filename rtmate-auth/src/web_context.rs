@@ -4,7 +4,7 @@ use axum::routing::post;
 use axum::Router;
 use axum::routing::get;
 use axum::routing::MethodRouter;
-use crate::dao::Dao;
+use rt_common::dao::Dao;
 use crate::service::auth_token;
 
 #[derive(Clone)]

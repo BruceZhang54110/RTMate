@@ -1,6 +1,7 @@
 pub mod req;
 pub mod handler;
 pub mod store;
+pub mod dao_query;
 
 
 

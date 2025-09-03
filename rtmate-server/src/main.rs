@@ -48,11 +48,12 @@ async fn main() {
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::debug!("listening on {}", addr);
 
-    let mut server = axum_server::bind_rustls(addr, config);
+    // let mut server = axum_server::bind_rustls(addr, config);
+    let server = axum_server::bind(addr);
 
     // IMPORTANT: This is required to advertise our support for HTTP/2 websockets to the client.
     // If you use axum::serve, it is enabled by default.
-    server.http_builder().http2().enable_connect_protocol();
+    // server.http_builder().http2().enable_connect_protocol();
 
     server.serve(app.into_make_service()).await.unwrap();
 

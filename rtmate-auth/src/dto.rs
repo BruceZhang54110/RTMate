@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 
 
 #[derive(Deserialize, Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct RtAppParam {
 
     pub app_id: String,

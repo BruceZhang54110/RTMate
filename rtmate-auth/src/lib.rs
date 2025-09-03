@@ -1,17 +1,18 @@
 pub mod web_context;
 pub mod service;
 pub mod db;
-pub mod dao;
+pub mod dao_bak;
 pub mod schema;
 pub mod models;
 pub mod common;
 pub mod dto;
+pub mod dao_query;
 
 
 #[cfg(test)]
 mod tests {
 
-    use crate::dao::Dao;
+    use crate::dao_bak::Dao;
     use crate::common::BizError;
     use crate::common::AppError;
     use anyhow::anyhow;

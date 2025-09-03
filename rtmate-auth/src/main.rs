@@ -12,4 +12,5 @@ async fn main() {
     .with(tracing_subscriber::fmt::layer())
     .init();
     web_context::startup().await;
+
 }

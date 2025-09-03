@@ -9,6 +9,8 @@ use uuid::Uuid;
 use hmac::Hmac;
 use sha2::Sha256;
 use hmac::Mac;
+use crate::dao_query::DaoQuery;
+
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -32,9 +34,12 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     // 校验签名判断是否合法请求
     let data = format!("{}:{}:{}", app_id, state, &timestamp);
     // 使用 HMAC-SHA256 生成签名
-        let mut mac = HmacSha256::new_from_slice(app_key_param.as_bytes())?;
-        mac.update(data.as_bytes());
-        let signature = hex::encode(mac.finalize().into_bytes());
+    let mut mac = HmacSha256::new_from_slice(app_key_param.as_bytes())?;
+    mac.update(data.as_bytes());
+    
+    let signature = hex::encode(mac.finalize().into_bytes());
+    tracing::debug!("Generated signature: {}, data is:{}", signature, data);
+
     if signature != rt_app_param.signature {
         // 签名不匹配，返回错误
         return Err(AppError::from(BizError::InvalidSignature));
