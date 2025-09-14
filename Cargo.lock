@@ -1432,6 +1432,7 @@ name = "rt-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "config",
  "deadpool-diesel",
  "deadpool-postgres",
@@ -1480,8 +1481,11 @@ dependencies = [
  "anyhow",
  "axum",
  "axum-server",
+ "chrono",
+ "diesel",
  "hex",
  "hmac",
+ "jsonwebtoken",
  "rt-common",
  "serde",
  "serde_json",

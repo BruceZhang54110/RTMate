@@ -80,13 +80,20 @@ async fn ws_handler(
                             let websocket_msg = s.to_string();
                             match handler::handle_msg(&websocket_msg) {
                                 Err(e) => {
-                                    let err_msg = format!("处理消息发生异常：{}", e);
-                                    if let Err(e) = ws.send(ws::Message::Text(err_msg.into())).await {
+                                    
+                                    // let err_msg = format!("处理消息发生异常：{}", e);
+                                    // tracing::debug!("failed to send message from server: {e}");
+                                    // if let Err(e) = ws.send(ws::Message::Text(err_msg.into())).await {
+                                    //     tracing::debug!("failed to send message from server: {e}");
+                                    // }
+                                }
+                                Ok(response_data) => {
+                                    let response_text = serde_json::to_string(&response_data).unwrap_or_else(|e| {
+                                        format!("序列化响应数据失败: {}", e)
+                                    });
+                                    if let Err(e) = ws.send(ws::Message::Text(response_text.into())).await {
                                         tracing::debug!("failed to send message from server: {e}");
                                     }
-                                }
-                                Ok(_) => {
-                                    tracing::debug!("receive message success from client");
                                 }
                             }
                         }

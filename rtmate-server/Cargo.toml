@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+rt-common = { path = "../rt-common"}
+
 axum = { workspace = true, features = ["http2", "ws", "tokio"] }
 axum-server = { workspace = true, features = ["tls-rustls"] }
 tokio = { workspace = true, features = ["full"] }
@@ -18,4 +20,7 @@ hmac = { workspace = true }
 sha2 = { workspace = true }
 hex = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
-rt-common = { path = "../rt-common"}
+jsonwebtoken = { workspace = true }
+chrono = { workspace = true }
+diesel = { workspace = true, features = ["postgres", "chrono"]}
+

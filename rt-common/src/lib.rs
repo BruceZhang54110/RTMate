@@ -1,4 +1,9 @@
 pub mod dao;
+pub mod dto;
+pub mod response_common;
+pub mod models;
+pub mod schema;
+
 
 pub fn add(left: u64, right: u64) -> u64 {
     left + right

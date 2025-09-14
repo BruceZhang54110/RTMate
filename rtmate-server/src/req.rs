@@ -20,11 +20,7 @@ pub struct AuthPayload {
     // token
     #[serde(deserialize_with = "not_empty_string")]
     pub token: String,
-    // 签名
-    #[serde(deserialize_with = "not_empty_string")]
-    pub signature: String,
-    // 时间戳
-    pub timestamp: u64,
+
 }
 
 /// 自定义反序列化函数，确保字段不为空字符串

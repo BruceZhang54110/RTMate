@@ -1,42 +1,49 @@
 
-use anyhow::Context;
-use anyhow::Ok;
-
+use anyhow::anyhow;
+use jsonwebtoken::TokenData;
+use crate::dto::AuthResponse;
 use crate::req::AuthPayload;
 use crate::req::MessageSendPayload;
 use crate::req::RequestEvent;
 use crate::req::RequestParam;
 use crate::req::SubscribePayload;
-use hmac::Hmac;
-use sha2::Sha256;
-
-const APP_ID: &str = "app_id";
-const TOKEN: &str = "token";
-
-type HmacSha256 = Hmac<Sha256>;
-
+use jsonwebtoken::{DecodingKey, Validation, Algorithm};
+use rt_common::dto::Claims;
+use rt_common::response_common::RtResponse;
+use crate::dto::WsData;
 
 /// 处理websocket  客户端传入的消息
-pub fn handle_msg(websocket_msg: &str) -> anyhow::Result<()> {
-    let request_param: RequestParam = serde_json::from_str(websocket_msg)
-        .with_context(|| format!("解析 Websocket 消息失败:{}", websocket_msg))?;
-    process_event(request_param.event, websocket_msg)
+pub fn handle_msg(websocket_msg: &str) -> anyhow::Result<RtResponse<WsData>> {
+    let request_param: Result<RequestParam, RtResponse<WsData>>  = serde_json::from_str(websocket_msg)
+        .map_err(|e| {
+            RtResponse {
+                code: 400,
+                message: format!("解析 Websocket 消息失败: {}", e),
+                data: None,
+            }
+        });
+    match request_param {
+        Err(err) => Ok(err),
+        Ok(param) => process_event(param.event),
+    }
 }
 
-fn process_event(event: RequestEvent, websocket_msg: &str) -> anyhow::Result<()> {
+fn process_event(event: RequestEvent) -> anyhow::Result<RtResponse<WsData>> {
     match event {
-        RequestEvent::Subscribe(payload) => {
-            handle_subscribe_msg(payload)
-                .with_context(|| format!("处理订阅消息失败:{}", websocket_msg))
-        }
-        RequestEvent::MessageSend(payload) => {
-            handle_send_msg(payload)
-                .with_context(|| format!("处理发送消息失败:{}", websocket_msg))
-        }
+        // RequestEvent::Subscribe(payload) => {
+        //     let a = handle_subscribe_msg(payload);
+        // }
+        // RequestEvent::MessageSend(payload) => {
+        //     handle_send_msg(payload)
+        //         .with_context(|| format!("处理发送消息失败:{}", websocket_msg))
+        // }
         RequestEvent::Auth(payload) => {
-            handle_auth_app(payload)
-                .with_context(|| format!("处理认证消息失败:{}", websocket_msg))
-        }
+            match handle_auth_app(payload) {
+                Ok(data) => Ok(RtResponse::ok_with_data(WsData::Auth(data))),
+                Err(e) => Ok(RtResponse::err(401, &e.to_string())), // 认证错误建议用401
+            }
+        },
+        _ => Err(anyhow!("不支持的事件类型")),
     }
 }
 
@@ -50,9 +57,35 @@ fn handle_send_msg(payload: MessageSendPayload) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// 处理应用认证，使用 hmac_sha256 算法进行签名验证
-pub fn handle_auth_app(payload: AuthPayload) -> anyhow::Result<()> {
+/// 处理应用认证，验证 jwt token
+pub fn handle_auth_app(payload: AuthPayload) -> anyhow::Result<AuthResponse> {
     // 从数据库中获取 appKey
     tracing::info!("收到认证请求: {:?}", payload);
-    Ok(())
+    let token = payload.token;
+    let app_id = payload.app_id;
+
+    tracing::info!("认证请求 app_id: {}, token: {}", app_id, token);
+    // 解码 token
+    let token_data= decode_token(&token, "dd")?;
+    // 验证 app_id 是否匹配
+    let claims = token_data.claims;
+    if claims.app_id != app_id {
+        return Err(anyhow!("app_id 不匹配"));
+    }
+    // 判断 token 是否过期
+    let now = chrono::Utc::now();
+    if claims.exp < now {
+        return Err(anyhow!("token 已过期"));
+    }
+    let client_id = claims.client_id;
+    tracing::info!("app_id: [{}], client_id: [{}]认证通过", claims.app_id, client_id);
+    Ok(AuthResponse::new(true, client_id))
+}
+
+/// jwt token 解码
+fn decode_token(token: &str, app_key: &str) -> anyhow::Result<TokenData<Claims>> {
+    let token_data = jsonwebtoken::decode::<Claims>(&token
+        , &DecodingKey::from_secret(app_key.as_ref())
+        , &Validation::new(Algorithm::HS256))?;
+    Ok(token_data)
 }

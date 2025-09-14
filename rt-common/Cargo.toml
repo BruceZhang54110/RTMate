@@ -14,3 +14,4 @@ dotenvy = {workspace = true }
 deadpool-diesel = { workspace = true, features = ["postgres"]}
 diesel = { workspace = true, features = ["postgres", "chrono"]}
 thiserror = { workspace = true }
+chrono = { workspace = true, features = ["serde"]}

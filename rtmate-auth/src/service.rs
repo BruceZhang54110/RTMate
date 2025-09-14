@@ -1,9 +1,12 @@
 use axum::{extract::State, Json};
-use crate::{common::{AppError, BizError, RtResponse}, schema::rt_app::app_key, web_context::WebContext};
+use rt_common::response_common::RtResponse;
 use std::sync::Arc;
 use crate::dto::{RtAppParam, AppAuthResult};
+use crate::common::BizError;
+use crate::common::AppError;
+use crate::web_context::WebContext;
 use jsonwebtoken::{encode, Header, EncodingKey};
-use crate::dto::Claims;
+use rt_common::dto::Claims;
 use chrono::{Utc, Duration};
 use uuid::Uuid;
 use hmac::Hmac;
@@ -52,7 +55,7 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     Ok(Json(RtResponse::ok_with_data(result)))
 }
 
-fn generate_jwt_token(app_id: &str, app_key_param: &str) -> Result<String, anyhow::Error> {
+fn generate_jwt_token(app_id: &str, app_key_param: &str) -> anyhow::Result<String> {
     let now = Utc::now();
     let exp = now + Duration::hours(2); // token 2小时后过期
 
