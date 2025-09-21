@@ -8,8 +8,10 @@ use std::{env, net::SocketAddr, path::PathBuf};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use axum_server::tls_rustls::RustlsConfig;
-
+use rtmate_server::web_context::WebContext;
 use rtmate_server::handler;
+use std::sync::Arc;
+use axum::extract::State;
 
 /// Websocket service main startup
 #[tokio::main]
@@ -34,7 +36,7 @@ async fn main() {
         .join("key.pem");
     // 加载配置
     let config = RustlsConfig::from_pem_file(cert_path, key).await.unwrap();
-
+    let web_context: Arc<WebContext> = WebContext::new().await.unwrap().into();
     // 设置路由，也就是路径地址
     let app = Router::new()
         .fallback(handle_404)
@@ -44,6 +46,7 @@ async fn main() {
             TraceLayer::new_for_http()
                 .make_span_with(DefaultMakeSpan::default().include_headers(true)),
         );
+    let app = app.with_state(web_context);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     tracing::debug!("listening on {}", addr);
@@ -63,6 +66,7 @@ async fn main() {
 
 
 async fn ws_handler(
+    State(web_context): State<Arc<WebContext>>,
     ws: WebSocketUpgrade,
     version: Version,
     headers: HeaderMap
@@ -78,7 +82,7 @@ async fn ws_handler(
                     match res {
                         Some(Ok(ws::Message::Text(s))) => {
                             let websocket_msg = s.to_string();
-                            match handler::handle_msg(&websocket_msg) {
+                            match handler::handle_msg(web_context.clone(), &websocket_msg).await {
                                 Err(e) => {
                                     
                                     // let err_msg = format!("处理消息发生异常：{}", e);

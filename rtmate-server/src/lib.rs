@@ -4,6 +4,7 @@ pub mod store;
 pub mod dao_query;
 pub mod common;
 pub mod dto;
+pub mod web_context;
 
 
 #[cfg(test)]
@@ -129,13 +130,11 @@ mod tests {
         // 模拟客户端传入的认证信息
         let payload = req::AuthPayload {
             app_id: app_id,
-            token: token,
-            signature: signature,
-            timestamp: timestamp
+            token: token
         };
 
         // 调用处理函数
-        let result = handler::handle_auth_app(payload, &store);
+        let result = handler::handle_auth_app(payload);
         println!("{:?}", result);
     }
 

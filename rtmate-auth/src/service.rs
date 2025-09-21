@@ -28,8 +28,7 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     let state = &rt_app_param.state;
     let timestamp = rt_app_param.timestamp;
 
-    let rt_app = web_context
-        .dao.get_rt_app_by_app_id(&rt_app_param.app_id)
+    let rt_app = web_context.dao.get_rt_app_by_app_id(&rt_app_param.app_id)
         .await?
         .ok_or(BizError::AppNotFound)?;
     let app_key_param = &rt_app.app_key;

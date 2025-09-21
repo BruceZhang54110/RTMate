@@ -1,6 +1,7 @@
 use jsonwebtoken::errors::Error as JwtError;
 use jsonwebtoken::errors::ErrorKind;
-
+use std::fmt;
+use std::error::Error;
 
 // 封装自己的AppError
 pub struct RtWsError {
@@ -10,23 +11,20 @@ pub struct RtWsError {
     pub source: Option<anyhow::Error>,
 }
 
-impl <E> From<E> for RtWsError
-where
-    E: Into<anyhow::Error>
-{
-    fn from(value: E) -> Self {
-        let source = value.into();
-        tracing::error!("Internal error: {:?}", source);
+impl From<anyhow::Error> for RtWsError {
+    fn from(value: anyhow::Error) -> Self {
+        tracing::error!("Internal error: {:?}", value);
         RtWsError {
-            code: 500, // 500 表示服务器异常
+            code: 500,
             message: "系统内部错误".to_string(),
-            source: Some(source),
+            source: Some(value),
         }
     }
-
 }
 
+#[derive(Debug)]
 pub enum BizError {
+    AppNotFound,
     JwtError(JwtError)
 }
 
@@ -35,6 +33,18 @@ impl From<JwtError> for BizError {
         BizError::JwtError(value)
     }
 }
+
+impl fmt::Display for BizError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BizError::AppNotFound => write!(f, "应用不存在（app_id未找到）"),
+            BizError::JwtError(err) => write!(f, "JWT 错误: {}", err),
+        }
+    }
+}
+
+impl Error for BizError {}
+
 
 impl From<BizError> for RtWsError {
     fn from(value: BizError) -> Self {
@@ -53,6 +63,11 @@ impl From<BizError> for RtWsError {
                     source: Some(anyhow::Error::new(err)),
                 }
             }
+            BizError::AppNotFound => RtWsError {
+                code: 400,
+                message: "app_id 未找到".to_string(),
+                source: None,
+            },
         }
     }
 }

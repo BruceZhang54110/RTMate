@@ -1,6 +1,8 @@
 
 use anyhow::anyhow;
 use jsonwebtoken::TokenData;
+use rt_common::dao::Dao;
+use crate::dao_query::DaoQuery;
 use crate::dto::AuthResponse;
 use crate::req::AuthPayload;
 use crate::req::MessageSendPayload;
@@ -11,9 +13,13 @@ use jsonwebtoken::{DecodingKey, Validation, Algorithm};
 use rt_common::dto::Claims;
 use rt_common::response_common::RtResponse;
 use crate::dto::WsData;
+use std::sync::Arc;
+use crate::web_context::WebContext;
+use crate::common::BizError;
 
 /// 处理websocket  客户端传入的消息
-pub fn handle_msg(websocket_msg: &str) -> anyhow::Result<RtResponse<WsData>> {
+pub async fn handle_msg(web_context: Arc<WebContext>
+        , websocket_msg: &str) -> anyhow::Result<RtResponse<WsData>> {
     let request_param: Result<RequestParam, RtResponse<WsData>>  = serde_json::from_str(websocket_msg)
         .map_err(|e| {
             RtResponse {
@@ -24,11 +30,11 @@ pub fn handle_msg(websocket_msg: &str) -> anyhow::Result<RtResponse<WsData>> {
         });
     match request_param {
         Err(err) => Ok(err),
-        Ok(param) => process_event(param.event),
+        Ok(param) => process_event(web_context, param.event).await,
     }
 }
 
-fn process_event(event: RequestEvent) -> anyhow::Result<RtResponse<WsData>> {
+async fn process_event(web_context: Arc<WebContext>, event: RequestEvent) -> anyhow::Result<RtResponse<WsData>> {
     match event {
         // RequestEvent::Subscribe(payload) => {
         //     let a = handle_subscribe_msg(payload);
@@ -38,9 +44,12 @@ fn process_event(event: RequestEvent) -> anyhow::Result<RtResponse<WsData>> {
         //         .with_context(|| format!("处理发送消息失败:{}", websocket_msg))
         // }
         RequestEvent::Auth(payload) => {
-            match handle_auth_app(payload) {
+            match handle_auth_app(web_context, payload).await {
                 Ok(data) => Ok(RtResponse::ok_with_data(WsData::Auth(data))),
-                Err(e) => Ok(RtResponse::err(401, &e.to_string())), // 认证错误建议用401
+                Err(e) => {
+                    tracing::error!("认证失败: {}", e);
+                    Ok(RtResponse::err(500, "系统异常"))
+                }, // 认证错误建议用401
             }
         },
         _ => Err(anyhow!("不支持的事件类型")),
@@ -58,7 +67,7 @@ fn handle_send_msg(payload: MessageSendPayload) -> anyhow::Result<()> {
 }
 
 /// 处理应用认证，验证 jwt token
-pub fn handle_auth_app(payload: AuthPayload) -> anyhow::Result<AuthResponse> {
+pub async fn handle_auth_app(web_context: Arc<WebContext>, payload: AuthPayload) -> anyhow::Result<AuthResponse> {
     // 从数据库中获取 appKey
     tracing::info!("收到认证请求: {:?}", payload);
     let token = payload.token;
@@ -66,7 +75,10 @@ pub fn handle_auth_app(payload: AuthPayload) -> anyhow::Result<AuthResponse> {
 
     tracing::info!("认证请求 app_id: {}, token: {}", app_id, token);
     // 解码 token
-    let token_data= decode_token(&token, "dd")?;
+    let rt_app = web_context.dao.get_rt_app_by_app_id(&app_id)
+        .await?
+        .ok_or(BizError::AppNotFound)?;
+    let token_data= decode_token(&token, &rt_app.app_key)?;
     // 验证 app_id 是否匹配
     let claims = token_data.claims;
     if claims.app_id != app_id {

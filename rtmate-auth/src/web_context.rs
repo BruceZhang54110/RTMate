@@ -27,7 +27,7 @@ impl WebContext {
 /// web服务初始化
 pub async fn startup() {
     // 初始化日志
-    let web_context = WebContext::new().await.unwrap().into();
+    let web_context: Arc<WebContext> = WebContext::new().await.unwrap().into();
     // 创建路由
     let app = init_router();
     // 创建API路由
