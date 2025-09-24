@@ -18,7 +18,7 @@ pub trait DaoQuery {
 
 impl DaoQuery for Dao {
 
-        async fn get_rt_app_by_app_id(&self, query_app_id: &str) -> anyhow::Result<Option<RtApp>> {
+    async fn get_rt_app_by_app_id(&self, query_app_id: &str) -> anyhow::Result<Option<RtApp>> {
         let pg_connection = self.get_connection().await?;
         let query_app_id = query_app_id.to_owned();
         let result = pg_connection.interact(move |conn: &mut diesel::PgConnection| {

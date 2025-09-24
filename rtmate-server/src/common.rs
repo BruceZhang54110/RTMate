@@ -1,74 +1,123 @@
-use jsonwebtoken::errors::Error as JwtError;
-use jsonwebtoken::errors::ErrorKind;
-use std::fmt;
-use std::error::Error;
-
-// 封装自己的AppError
-pub struct RtWsError {
-    pub code: i32,
-    pub message: String,
-    // 用于调试内部错误
-    pub source: Option<anyhow::Error>,
+#[derive(Debug, Clone, Copy)]
+pub enum WsBizCode {
+    // 应用未找到
+    AppNotFound,
+    // 参数错误
+    InvalidParams,
+    // 无效token
+    InvalidToken,
+    // 过期token
+    ExpiredToken,
+    // 签名无效
+    SignatureInvalid,
+    // 认证失败（app_id不匹配）
+    AuthMismatch,
+    // 不支持的事件类型
+    UnsupportedEvent,
 }
 
-impl From<anyhow::Error> for RtWsError {
-    fn from(value: anyhow::Error) -> Self {
-        tracing::error!("Internal error: {:?}", value);
-        RtWsError {
-            code: 500,
-            message: "系统内部错误".to_string(),
-            source: Some(value),
+impl WsBizCode {
+    pub fn code(self) -> i32 {
+        match self {
+            WsBizCode::InvalidParams => 400,
+            WsBizCode::AppNotFound => 400,
+            WsBizCode::InvalidToken => 401,
+            WsBizCode::ExpiredToken => 401,
+            WsBizCode::SignatureInvalid => 1005,
+            WsBizCode::AuthMismatch => 401,
+            WsBizCode::UnsupportedEvent => 400,
+        }
+    }
+    pub fn message(self) -> &'static str {
+        match self {
+            WsBizCode::InvalidParams => "参数错误",
+            WsBizCode::AppNotFound => "app_id 未找到",
+            WsBizCode::InvalidToken => "无效的 token",
+            WsBizCode::ExpiredToken => "token 已过期",
+            WsBizCode::SignatureInvalid => "签名验证失败",
+            WsBizCode::AuthMismatch => "认证失败（app_id 不匹配）",
+            WsBizCode::UnsupportedEvent => "不支持的事件类型",
         }
     }
 }
 
 #[derive(Debug)]
-pub enum BizError {
-    AppNotFound,
-    JwtError(JwtError)
-}
-
-impl From<JwtError> for BizError {
-    fn from(value: JwtError) -> Self {
-        BizError::JwtError(value)
+pub enum RtWsError {
+    Business {
+        code: i32,
+        message: String,
+        biz: WsBizCode,
+    },
+    System {
+        code: i32,
+        message: String,
+        source: anyhow::Error,
     }
 }
 
-impl fmt::Display for BizError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl RtWsError {
+    pub fn biz(b: WsBizCode) -> Self {
+        RtWsError::Business {
+            code: b.code(),
+            message: b.message().to_string(),
+            biz: b,
+        }
+    }
+    pub fn system(msg: &str, err: impl Into<anyhow::Error>) -> Self {
+        let src = err.into();
+        tracing::error!("internal_error msg={msg} error={:?}", src);
+        RtWsError::System {
+            code: 500,
+            // 保留调用方传入的简短说明，方便日志检索
+            message: msg.to_string(),
+            source: src,
+        }
+
+    }
+
+    pub fn code(&self) -> i32 {
         match self {
-            BizError::AppNotFound => write!(f, "应用不存在（app_id未找到）"),
-            BizError::JwtError(err) => write!(f, "JWT 错误: {}", err),
+            RtWsError::Business { code, .. } => *code,
+            RtWsError::System { code, .. } => *code,
+        }
+    }
+
+    pub fn message(&self) -> &str {
+        match self {
+            RtWsError::Business { message, .. } => message,
+            RtWsError::System { message, .. } => message,
+        }
+    }
+
+}
+
+impl std::fmt::Display for RtWsError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RtWsError::Business { code, message, .. } => write!(f, "BusinessError(code={}, message={})", code, message),
+            RtWsError::System { code, message, .. } => write!(f, "SystemError(code={}, message={})", code, message),
         }
     }
 }
 
-impl Error for BizError {}
+impl std::error::Error for RtWsError {}
 
-
-impl From<BizError> for RtWsError {
-    fn from(value: BizError) -> Self {
-        match value {
-            BizError::JwtError(err) => {
-                // 根据 JwtError 的类型进行更细致的错误码映射
-                let (code, message) = match err.kind() {
-                    ErrorKind::ExpiredSignature => (401, "Token 已过期"),
-                    ErrorKind::InvalidSignature => (1005, "签名验证失败，请检查您的请求是否合法"),
-                    ErrorKind::InvalidToken => (401, "无效的token"),
-                    _ => (500, "Token 解码失败"),
-                };
-                RtWsError {
-                    code,
-                    message: message.to_string(),
-                    source: Some(anyhow::Error::new(err)),
-                }
-            }
-            BizError::AppNotFound => RtWsError {
-                code: 400,
-                message: "app_id 未找到".to_string(),
-                source: None,
-            },
+// JWT 专用映射
+impl From<jsonwebtoken::errors::Error> for RtWsError {
+    fn from(e: jsonwebtoken::errors::Error) -> Self {
+        use jsonwebtoken::errors::ErrorKind::*;
+        match e.kind() {
+            ExpiredSignature => RtWsError::biz(WsBizCode::ExpiredToken),
+            InvalidSignature => RtWsError::biz(WsBizCode::SignatureInvalid),
+            InvalidToken => RtWsError::biz(WsBizCode::InvalidToken),
+            _ => RtWsError::system("JWT解析失败", e),
         }
     }
 }
 
+// 统一错误转换为响应结构，便于在调用端直接 .map_err(|e| RtResponse::from(e))
+impl<T> From<RtWsError> for rt_common::response_common::RtResponse<T> {
+    fn from(e: RtWsError) -> Self {
+        rt_common::response_common::RtResponse::err(e.code(), e.message())
+    }
+}

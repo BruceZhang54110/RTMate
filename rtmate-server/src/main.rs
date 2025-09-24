@@ -12,6 +12,8 @@ use rtmate_server::web_context::WebContext;
 use rtmate_server::handler;
 use std::sync::Arc;
 use axum::extract::State;
+use rt_common::response_common::RtResponse;
+use rtmate_server::dto::WsData;
 
 /// Websocket service main startup
 #[tokio::main]
@@ -35,7 +37,7 @@ async fn main() {
         .join("self_signed_certs")
         .join("key.pem");
     // 加载配置
-    let config = RustlsConfig::from_pem_file(cert_path, key).await.unwrap();
+    let _config = RustlsConfig::from_pem_file(cert_path, key).await.unwrap();
     let web_context: Arc<WebContext> = WebContext::new().await.unwrap().into();
     // 设置路由，也就是路径地址
     let app = Router::new()
@@ -82,22 +84,21 @@ async fn ws_handler(
                     match res {
                         Some(Ok(ws::Message::Text(s))) => {
                             let websocket_msg = s.to_string();
-                            match handler::handle_msg(web_context.clone(), &websocket_msg).await {
-                                Err(e) => {
-                                    
-                                    // let err_msg = format!("处理消息发生异常：{}", e);
-                                    // tracing::debug!("failed to send message from server: {e}");
-                                    // if let Err(e) = ws.send(ws::Message::Text(err_msg.into())).await {
-                                    //     tracing::debug!("failed to send message from server: {e}");
-                                    // }
-                                }
-                                Ok(response_data) => {
-                                    let response_text = serde_json::to_string(&response_data).unwrap_or_else(|e| {
-                                        format!("序列化响应数据失败: {}", e)
-                                    });
-                                    if let Err(e) = ws.send(ws::Message::Text(response_text.into())).await {
-                                        tracing::debug!("failed to send message from server: {e}");
+                            // 统一：领域调用 -> (Result) -> 转成统一响应 -> 序列化发送
+                            let resp: RtResponse<WsData> =
+                                handler::handle_msg(web_context.clone(), &websocket_msg)
+                                    .await
+                                    .unwrap_or_else(|e| e.into());
+
+                            match serde_json::to_string(&resp) {
+                                Ok(text) => {
+                                    tracing::debug!("Sending ws response: {}", text);
+                                    if let Err(e) = ws.send(ws::Message::Text(text.into())).await {
+                                        tracing::debug!("failed to send ws response: {e}");
                                     }
+                                }
+                                Err(e) => {
+                                    tracing::error!("serialize ws response failed: {}", e);
                                 }
                             }
                         }
