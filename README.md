@@ -141,7 +141,6 @@ rt-common/        # 共享 DTO / Response / Claims
 rtmate-server/    # WebSocket 服务入口 (当前主要逻辑)
 rtmate-auth/      # 认证相关探索 (后续可能整合)
 ```
-核心文件：`rtmate-server/src/handler.rs` · `common.rs` · `req.rs`
 
 ## 9. Limitations
 - 无广播 / 频道 / Presence
@@ -152,60 +151,6 @@ rtmate-auth/      # 认证相关探索 (后续可能整合)
 
 ## 10. License
 Apache-2.0 （见根目录 LICENSE）
-
-## 11. Auth Token 说明
-当前 Auth 事件使用 JWT（HS256）。服务端执行：
-
-Claims 期望字段（示例）：
-```jsonc
-{
-	"app_id": "demo-app",      // 与请求 payload.appId 匹配
-	"client_id": "abc123",      // 客户端自身标识（可用于后续 presence）
-	"iat": 1726880000,           // 签发时间 (Unix 秒)
-	"exp": 1726883600            // 过期时间 (Unix 秒)
-}
-```
-注意：目前未提供签发服务端点，可用本地脚本或 jwt.io 生成；生产环境请安全存储密钥（不要提交到仓库）。
-
-## 12. Metadata / TraceId
-请求中可以附带：
-```jsonc
-{
-	"metadata": { "traceId": "<可选>" }
-}
-```
-现状：暂未在日志链路/响应中回显 traceId（规划中）。后续实现：
-1. 进入 `handle_msg` 时如果 metadata.traceId 存在则写入 `tracing::Span`。
-2. 错误与成功响应都可在 data 或 header-like 附带 `traceId`。
-3. Prometheus / 日志聚合中可关联单次交互。
-
-## 13. 开发调试
-Web 浏览器示例见 Quick Start。
-
-命令行（推荐）使用 websocat：
-```bash
-brew install websocat   # 若未安装
-websocat ws://127.0.0.1:3000/ws
-```
-然后手动输入：
-```json
-{"event":"auth","payload":{"appId":"demo-app","token":"FAKE_JWT"}}
-```
-
-若想查看日志：
-```bash
-RUST_LOG=info cargo run
-```
-
-（计划）未来会提供一个 examples/ 简易脚本生成测试 JWT。
-
-## 14. 贡献 / Contributing
-欢迎 Issue / PR：
-- 发现文档或实现不一致
-- 补充测试（当前缺少单元测试 / 集成测试）
-- 讨论协议扩展字段（e.g. 分页、ack、心跳）
-
-简单建议：提 PR 前先开 Issue 说明场景，避免方向偏移。
 
 ---
 Future Goal: 高性能、多租户、可扩展（Webhook / 脚本 / 用量计费）的实时消息内核。欢迎 Issue / PR。
