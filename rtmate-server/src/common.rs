@@ -1,3 +1,6 @@
+use rt_common::response_common::RtResponse;
+use jsonwebtoken::errors::ErrorKind::*;
+
 #[derive(Debug, Clone, Copy)]
 pub enum WsBizCode {
     // 应用未找到
@@ -105,7 +108,7 @@ impl std::error::Error for RtWsError {}
 // JWT 专用映射
 impl From<jsonwebtoken::errors::Error> for RtWsError {
     fn from(e: jsonwebtoken::errors::Error) -> Self {
-        use jsonwebtoken::errors::ErrorKind::*;
+        
         match e.kind() {
             ExpiredSignature => RtWsError::biz(WsBizCode::ExpiredToken),
             InvalidSignature => RtWsError::biz(WsBizCode::SignatureInvalid),
@@ -116,8 +119,9 @@ impl From<jsonwebtoken::errors::Error> for RtWsError {
 }
 
 // 统一错误转换为响应结构，便于在调用端直接 .map_err(|e| RtResponse::from(e))
-impl<T> From<RtWsError> for rt_common::response_common::RtResponse<T> {
+impl<T> From<RtWsError> for RtResponse<T> {
     fn from(e: RtWsError) -> Self {
-        rt_common::response_common::RtResponse::err(e.code(), e.message())
+        RtResponse::err(e.code(), e.message())
     }
 }
+

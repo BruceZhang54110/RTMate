@@ -59,9 +59,11 @@ fn generate_jwt_token(app_id: &str, app_key_param: &str) -> anyhow::Result<Strin
     let exp = now + Duration::hours(2); // token 2小时后过期
 
     // 1. 生成 client_id
-    let client_id = Uuid::new_v4().to_string();
+    let client_id = Uuid::new_v4().as_simple().to_string();
+    // 2. 生成 jti
+    let jti = Uuid::new_v4().as_simple().to_string();
     // 2. 生成 claims paypoad
-    let claims = Claims::new(app_id.to_string(), client_id, now, exp);
+    let claims = Claims::new(app_id.to_string(), client_id, jti, now, exp);
     let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(app_key_param.as_ref()))?;
     Ok(token)
 }

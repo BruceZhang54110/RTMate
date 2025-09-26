@@ -104,21 +104,22 @@ mod tests {
 
         // 数据库存储app_id -> app_key
         let mut store = store::Store::new();
-        let app_key = Uuid::new_v4().to_string();
-        store.insert("abc".to_string(), app_key);
+        let app_key = "af57761c55de41a7aef0a5e940f751af".to_string();
+        store.insert("abcdef".to_string(), app_key);
 
-        let app_id = "abc".to_string();
-        let token = Uuid::new_v4().to_string();
-        let timestamp= SystemTime::now()
-                            .duration_since(UNIX_EPOCH)
-                            .unwrap()
-                            .as_millis() as u64;
+        let app_id = "abcdef".to_string();
+        let state = "b1fe7836511f45a398e6206bbc4cd951".to_string();
+        // let timestamp= SystemTime::now()
+        //                     .duration_since(UNIX_EPOCH)
+        //                     .unwrap()
+        //                     .as_millis() as u64;
+        let timestamp: u64 = 1758891472000;
         // 模拟客户端生成signature
-        let auth_data = format!("{}:{}:{}", &app_id, &token, &timestamp);
+        let auth_data = format!("{}:{}:{}", &app_id, &state, &timestamp);
         let app_key = store.get(&app_id)
         .ok_or_else(|| anyhow::anyhow!("appId not found in store")).unwrap();
 
-        println!("app_key: {}", app_key);
+        println!("appId:{} app_key: {}, timestamp: {}", app_id, app_key, timestamp);
         println!("auth_data: {}", auth_data);
 
         // 使用 HMAC-SHA256 生成签名
@@ -127,15 +128,11 @@ mod tests {
         let signature = hex::encode(mac.finalize().into_bytes());
         println!("signature: {}", signature);
 
-        // 模拟客户端传入的认证信息
-        let payload = req::AuthPayload {
-            app_id: app_id,
-            token: token
-        };
+    }
 
-        // 调用处理函数
-        let result = handler::handle_auth_app(payload);
-        println!("{:?}", result);
+    #[test]
+    fn test_println_uuid() {
+        println!("{}", Uuid::new_v4().as_simple().to_string());
     }
 
 
