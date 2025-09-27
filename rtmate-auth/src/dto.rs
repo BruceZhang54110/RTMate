@@ -19,14 +19,16 @@ pub struct RtAppParam {
 #[derive(Deserialize, Serialize, Debug)]
 pub struct AppAuthResult {
     app_id: String,
-    token: String,
+    access_token: String,
+    connect_token: String,
 }
 
 impl AppAuthResult {
-    pub fn new(app_id: String, token: String) -> Self {
+    pub fn new(app_id: String, access_token: String, connect_token: String) -> Self {
         AppAuthResult {
             app_id,
-            token,
+            access_token,
+            connect_token,  
         }
     }
 }

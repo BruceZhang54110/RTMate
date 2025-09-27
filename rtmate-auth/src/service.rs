@@ -48,9 +48,11 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     }
 
     // 2. 生成 jwt token
-    let token = generate_jwt_token(&rt_app.app_id, &rt_app.app_key)?;
-    // 3. 返回结果
-    let result = AppAuthResult::new(rt_app.app_id, token);
+    let jwt_token = generate_jwt_token(&rt_app.app_id, &rt_app.app_key)?;
+    // 3. 生成 connect_token
+    let connect_token = Uuid::new_v4().as_simple().to_string();
+    // 4. 返回结果
+    let result = AppAuthResult::new(rt_app.app_id, jwt_token, connect_token);
     Ok(Json(RtResponse::ok_with_data(result)))
 }
 
