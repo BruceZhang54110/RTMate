@@ -1428,23 +1428,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rt-common"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "config",
- "deadpool-diesel",
- "deadpool-postgres",
- "diesel",
- "dotenvy",
- "serde",
- "serde_json",
- "thiserror",
- "tokio-postgres",
-]
-
-[[package]]
 name = "rtmate-auth"
 version = "0.1.0"
 dependencies = [
@@ -1460,7 +1443,7 @@ dependencies = [
  "hex",
  "hmac",
  "jsonwebtoken",
- "rt-common",
+ "rtmate-common",
  "serde",
  "serde_json",
  "sha2",
@@ -1475,6 +1458,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "rtmate-common"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "config",
+ "deadpool-diesel",
+ "deadpool-postgres",
+ "diesel",
+ "dotenvy",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio-postgres",
+]
+
+[[package]]
 name = "rtmate-server"
 version = "0.1.0"
 dependencies = [
@@ -1486,7 +1486,7 @@ dependencies = [
  "hex",
  "hmac",
  "jsonwebtoken",
- "rt-common",
+ "rtmate-common",
  "serde",
  "serde_json",
  "sha2",

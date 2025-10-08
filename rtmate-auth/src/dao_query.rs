@@ -2,7 +2,7 @@ use diesel::ExpressionMethods;
 use diesel::OptionalExtension;
 use diesel::QueryDsl;
 use diesel::RunQueryDsl;
-use rt_common::dao::Dao;
+use rtmate_common::dao::Dao;
 use diesel::SelectableHelper;
 
 

@@ -137,7 +137,7 @@ Phase 4 (进阶特性)
 
 ## 8. Project Structure
 ```
-rt-common/        # 共享 DTO / Response / Claims
+rtmate-common/        # 共享 DTO / Response / Claims
 rtmate-server/    # WebSocket 服务入口 (当前主要逻辑)
 rtmate-auth/      # 认证相关探索 (后续可能整合)
 ```

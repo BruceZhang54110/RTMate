@@ -2,7 +2,7 @@
 
 resolver = "2"
 
-members = ["rt-common",
+members = ["rtmate-common",
     "rtmate-auth",
     "rtmate-server"
 ]

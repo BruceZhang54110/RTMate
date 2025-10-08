@@ -1,4 +1,4 @@
-use rt_common::response_common::RtResponse;
+use rtmate_common::response_common::RtResponse;
 use jsonwebtoken::errors::ErrorKind::*;
 
 #[derive(Debug, Clone, Copy)]

@@ -1,12 +1,12 @@
 use axum::{extract::State, Json};
-use rt_common::response_common::RtResponse;
+use rtmate_common::response_common::RtResponse;
 use std::sync::Arc;
 use crate::dto::{RtAppParam, AppAuthResult};
 use crate::common::BizError;
 use crate::common::AppError;
 use crate::web_context::WebContext;
 use jsonwebtoken::{encode, Header, EncodingKey};
-use rt_common::dto::Claims;
+use rtmate_common::dto::Claims;
 use chrono::{Utc, Duration};
 use uuid::Uuid;
 use hmac::Hmac;

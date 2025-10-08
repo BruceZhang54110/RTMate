@@ -1,5 +1,5 @@
 
-use rt_common::dao::Dao;
+use rtmate_common::dao::Dao;
 
 #[derive(Clone)]
 pub struct WebContext {

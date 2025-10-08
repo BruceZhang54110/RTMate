@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rt-common = { path = "../rt-common"}
+rtmate-common = { path = "../rtmate-common"}
 
 axum = { workspace = true, features = ["http2", "ws", "tokio"] }
 axum-server = { workspace = true, features = ["tls-rustls"] }

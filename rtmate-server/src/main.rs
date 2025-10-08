@@ -4,6 +4,7 @@ use axum::{
         ws::{self, WebSocketUpgrade},
         }, http::{StatusCode, Version}, response::{Html, IntoResponse}, routing::any, Router
 };
+use axum::extract::Query;
 use std::{env, net::SocketAddr, path::PathBuf};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -12,8 +13,9 @@ use rtmate_server::web_context::WebContext;
 use rtmate_server::handler;
 use std::sync::Arc;
 use axum::extract::State;
-use rt_common::response_common::RtResponse;
+use rtmate_common::response_common::RtResponse;
 use rtmate_server::dto::WsData;
+use rtmate_server::dto::QueryParam;
 
 /// Websocket service main startup
 #[tokio::main]
@@ -71,12 +73,19 @@ async fn ws_handler(
     State(web_context): State<Arc<WebContext>>,
     ws: WebSocketUpgrade,
     version: Version,
-    headers: HeaderMap
+    headers: HeaderMap,
+    query_param: Query<QueryParam>,
 ) -> axum::response::Response {
     tracing::debug!("accepted a WebSocket using {version:?}");
     tracing::debug!("accepted a WebSocket Header using {headers:?}");
+    tracing::debug!("accepted a WebSocket Query using {query_param:?}");
+    tracing::debug!("accepted a WebSocket Connect Token using {:?}", query_param.connect_token);
+    if query_param.connect_token.is_none() {
+        return (StatusCode::BAD_REQUEST, "missing connect_token").into_response();
+    }
     // 升级为 WebSocket 连接
     ws.on_upgrade(|mut ws| async move {
+        tracing::debug!("WebSocket connection established");
         loop {
             tokio::select! {
                 // Since `ws` is a `Stream`, it is by nature cancel-safe.
