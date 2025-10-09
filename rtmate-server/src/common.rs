@@ -5,6 +5,10 @@ use jsonwebtoken::errors::ErrorKind::*;
 pub enum WsBizCode {
     // 应用未找到
     AppNotFound,
+    // 无效的 connect_token
+    InvalidConnectToken,
+    // connect_token 过期
+    ExpiredConnectToken,
     // 参数错误
     InvalidParams,
     // 无效token
@@ -24,6 +28,8 @@ impl WsBizCode {
         match self {
             WsBizCode::InvalidParams => 400,
             WsBizCode::AppNotFound => 400,
+            WsBizCode::InvalidConnectToken => 400,
+            WsBizCode::ExpiredConnectToken => 400,
             WsBizCode::InvalidToken => 401,
             WsBizCode::ExpiredToken => 401,
             WsBizCode::SignatureInvalid => 1005,
@@ -35,6 +41,8 @@ impl WsBizCode {
         match self {
             WsBizCode::InvalidParams => "参数错误",
             WsBizCode::AppNotFound => "app_id 未找到",
+            WsBizCode::InvalidConnectToken => "无效的 connect_token",
+            WsBizCode::ExpiredConnectToken => "connect_token 已过期",
             WsBizCode::InvalidToken => "无效的 token",
             WsBizCode::ExpiredToken => "token 已过期",
             WsBizCode::SignatureInvalid => "签名验证失败",

@@ -16,7 +16,7 @@ pub trait DaoQuery {
     /// 根据 app_id 查询 RtApp
     async fn get_rt_app_by_app_id(&self, query_app_id: &str) -> anyhow::Result<Option<RtApp>>;
 
-    async fn get_rt_client_connection_by_client_id(&self, query_client_id: &str) -> anyhow::Result<Option<RtClientConnection>>;
+    async fn get_rt_client_connection_by_token(&self, query_connect_token: &str) -> anyhow::Result<Option<RtClientConnection>>;
 
 }
 
@@ -35,13 +35,15 @@ impl DaoQuery for Dao {
         Ok(result)
     }
 
-    async fn get_rt_client_connection_by_client_id(&self, query_client_id: &str) -> anyhow::Result<Option<RtClientConnection>> {
+    /// 根据 connect_token 查询还未创建成功的 RtClientConnection token
+    async fn get_rt_client_connection_by_token(&self, query_connect_token: &str) -> anyhow::Result<Option<RtClientConnection>> {
         let pg_connection = self.get_connection().await?;
-        let query_client_id = query_client_id.to_owned();
+        let connect_token_query = query_connect_token.to_owned();
+        use rtmate_common::schema::rt_client_connection::dsl::*;
         let result = pg_connection.interact(move |conn: &mut diesel::PgConnection| {
-            use rtmate_common::schema::rt_client_connection::dsl::*;
             rt_client_connection
-                .filter(client_id.eq(query_client_id))
+                .filter(connect_token.eq(connect_token_query))
+                .filter(used.eq(false))
                 .select(RtClientConnection::as_select())
                 .first::<RtClientConnection>(conn)
                 .optional()

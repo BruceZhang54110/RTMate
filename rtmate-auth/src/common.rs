@@ -1,5 +1,5 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
-use serde::{de, Serialize};
+use serde::Serialize;
 
 // 封装自己的AppError
 pub struct AppError {

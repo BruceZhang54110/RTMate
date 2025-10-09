@@ -20,6 +20,7 @@ impl AuthResponse {
 pub enum WsData {
 
     Auth(AuthResponse),
+    Connect(AuthResponse),
 }
 
 #[derive(Debug, Deserialize)]

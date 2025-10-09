@@ -83,6 +83,17 @@ async fn ws_handler(
     if query_param.connect_token.is_none() {
         return (StatusCode::BAD_REQUEST, "missing connect_token").into_response();
     }
+    let connect_token = match query_param.connect_token.as_deref() {
+        Some(t) => t,
+        None => {
+            return (StatusCode::BAD_REQUEST, "missing connect_token").into_response();
+        }   
+    };
+    if let Err(e) = handler::check_connect_token(web_context.clone(), connect_token).await {
+        let resp: RtResponse<WsData> = e.into();
+        return (StatusCode::from_u16(resp.code as u16).unwrap_or(StatusCode::BAD_REQUEST), axum::Json(resp)).into_response();
+    }
+    
     // 升级为 WebSocket 连接
     ws.on_upgrade(|mut ws| async move {
         tracing::debug!("WebSocket connection established");
