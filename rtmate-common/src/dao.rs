@@ -111,6 +111,13 @@ impl DataSource {
 
     }
 
+    pub async fn get_connection(&self) -> anyhow::Result<Object> {
+        let conn  = self.pool.get().await?;
+        Ok(conn)
+    }
+
+
+
 }
 
 #[derive(Clone)]

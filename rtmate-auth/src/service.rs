@@ -12,7 +12,6 @@ use uuid::Uuid;
 use hmac::Hmac;
 use sha2::Sha256;
 use hmac::Mac;
-use crate::dao_query::DaoQuery;
 
 
 type HmacSha256 = Hmac<Sha256>;
@@ -28,7 +27,9 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     let state = &rt_app_param.state;
     let timestamp = rt_app_param.timestamp;
 
-    let rt_app = web_context.dao.get_rt_app_by_app_id(&rt_app_param.app_id)
+    let rt_app = web_context
+        .rt_app_repository
+        .get_rt_app_by_app_id(&rt_app_param.app_id)
         .await?
         .ok_or(BizError::AppNotFound)?;
     let app_key_param = &rt_app.app_key;
@@ -51,7 +52,9 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     let jwt_token = generate_jwt_token(&rt_app.app_id, &rt_app.app_key)?;
     // 3. 生成 connect_token
     let connect_token = Uuid::new_v4().as_simple().to_string();
-    // 4. 返回结果
+    // 4. 保存 connect_token 到数据库
+    //web_context.dao.save_connect_token(&rt_app.app_id, &connect_token).await?;
+    // 5. 返回结果
     let result = AppAuthResult::new(rt_app.app_id, jwt_token, connect_token);
     Ok(Json(RtResponse::ok_with_data(result)))
 }

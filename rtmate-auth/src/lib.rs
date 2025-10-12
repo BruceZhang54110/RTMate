@@ -1,11 +1,10 @@
 pub mod web_context;
 pub mod service;
 pub mod db;
-pub mod schema;
-pub mod models;
 pub mod common;
 pub mod dto;
-pub mod dao_query;
+pub mod domain;
+pub mod infrastructure;
 
 
 #[cfg(test)]

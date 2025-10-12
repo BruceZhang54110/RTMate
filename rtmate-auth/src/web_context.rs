@@ -4,20 +4,22 @@ use axum::routing::post;
 use axum::Router;
 use axum::routing::get;
 use axum::routing::MethodRouter;
-use rtmate_common::dao::Dao;
+use rtmate_common::dao::DataSource;
+use crate::domain::repositories::rt_app_repository_trait::RtAppRepositoryTrait;
+use crate::infrastructure::persistence::RtAppRepository;
 use crate::service::auth_token;
 
 #[derive(Clone)]
 pub struct WebContext {
+    pub rt_app_repository: Arc<dyn RtAppRepositoryTrait>,
 
-    // 数据源
-    pub dao: Dao,
 }
 
 impl WebContext {
     pub async fn new() -> anyhow::Result<Self> {
-        let dao = Dao::new().await?;
-        Ok(WebContext { dao })
+        let data_source = DataSource::new().await?;
+        let rt_app_repository = Arc::new(RtAppRepository::new(data_source.clone()));
+        Ok(WebContext { rt_app_repository })
     }
 
 }
