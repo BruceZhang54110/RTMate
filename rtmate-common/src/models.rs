@@ -1,5 +1,6 @@
 use diesel::Selectable;
 use diesel::Queryable;
+use diesel::Insertable;
 use serde::Deserialize;
 use serde::Serialize;
 use crate::schema::rt_app;
@@ -32,5 +33,17 @@ pub struct RtClientConnection {
     pub connect_token: String,
     pub used: bool,
     pub created_time: Option<DateTime<Utc>>,
+    pub expire_time: Option<DateTime<Utc>>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = rt_client_connection)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewRtClientConnection {
+    pub app_id: i64,
+    pub rt_app: String,
+    pub client_id: String,
+    pub connect_token: String,
+    pub used: bool,
     pub expire_time: Option<DateTime<Utc>>,
 }

@@ -53,7 +53,23 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     // 3. 生成 connect_token
     let connect_token = Uuid::new_v4().as_simple().to_string();
     // 4. 保存 connect_token 到数据库
-    //web_context.dao.save_connect_token(&rt_app.app_id, &connect_token).await?;
+    use rtmate_common::models::NewRtClientConnection;
+    // 这里示例: 假设 rt_app.id 作为外键 app_id, rt_app.app_id 字段填入 rt_app 列
+    // client_id 可以与 jwt claims 中使用的 client_id 保持一致 (上面 generate_jwt_token 内部生成了, 但未返回 client_id, 若需一致性 可调整 generate_jwt_token 返回 client_id)
+    // 当前示例暂生成一个新的 client_id 记录
+    let client_id_for_conn = Uuid::new_v4().as_simple().to_string();
+    let new_conn = NewRtClientConnection {
+        app_id: rt_app.id,
+        rt_app: rt_app.app_key,
+        client_id: client_id_for_conn,
+        connect_token: connect_token.clone(),
+        used: false,
+        expire_time: None,
+    };
+    web_context
+        .rt_app_repository
+        .save_connect_token(new_conn)
+        .await?;
     // 5. 返回结果
     let result = AppAuthResult::new(rt_app.app_id, jwt_token, connect_token);
     Ok(Json(RtResponse::ok_with_data(result)))

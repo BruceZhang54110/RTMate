@@ -1,8 +1,8 @@
 
 use serde::Deserialize;
 use config::ConfigError;
-use deadpool_postgres::Runtime;
 use thiserror::Error;
+use deadpool_postgres::Runtime;
 use deadpool_diesel::postgres::BuildError;
 use deadpool_diesel::postgres::Manager;
 use deadpool_diesel::postgres::Pool;

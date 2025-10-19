@@ -17,7 +17,7 @@ pub struct WebContext {
 
 impl WebContext {
     pub async fn new() -> anyhow::Result<Self> {
-        let data_source = DataSource::new().await?;
+        let data_source = Arc::new(DataSource::new().await?);
         let rt_app_repository = Arc::new(RtAppRepository::new(data_source.clone()));
         Ok(WebContext { rt_app_repository })
     }

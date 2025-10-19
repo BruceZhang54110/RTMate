@@ -11,6 +11,7 @@ use tracing::warn;
 
 #[derive(Debug, Deserialize)]
 struct Config {
+    // https://docs.rs/deadpool-postgres/0.14.1/deadpool_postgres/struct.Config.html
     pg: deadpool_postgres::Config,
 }
 
