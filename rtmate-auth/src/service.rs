@@ -60,7 +60,8 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
     let client_id_for_conn = Uuid::new_v4().as_simple().to_string();
     let new_conn = NewRtClientConnection {
         app_id: rt_app.id,
-        rt_app: rt_app.app_key,
+        // 克隆 app_id 避免后续仍需使用 rt_app.app_id 时发生所有权移动
+        rt_app: rt_app.app_id.clone(),
         client_id: client_id_for_conn,
         connect_token: connect_token.clone(),
         used: false,
@@ -71,6 +72,7 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
         .save_connect_token(new_conn)
         .await?;
     // 5. 返回结果
+    // 这里构造响应时再克隆一次 app_id；如果后续不再使用 rt_app.app_id，可以直接移动
     let result = AppAuthResult::new(rt_app.app_id, jwt_token, connect_token);
     Ok(Json(RtResponse::ok_with_data(result)))
 }
