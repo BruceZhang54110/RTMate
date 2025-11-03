@@ -76,22 +76,24 @@ async fn ws_handler(
     headers: HeaderMap,
     query_param: Query<QueryParam>,
 ) -> axum::response::Response {
-    tracing::debug!("accepted a WebSocket using {version:?}");
-    tracing::debug!("accepted a WebSocket Header using {headers:?}");
-    tracing::debug!("accepted a WebSocket Query using {query_param:?}");
-    tracing::debug!("accepted a WebSocket Connect Token using {:?}", query_param.connect_token);
+    tracing::debug!("1 accepted a WebSocket using {version:?}");
+    tracing::debug!("2 accepted a WebSocket Header using {headers:?}");
+    tracing::debug!("3 accepted a WebSocket Query using {query_param:?}");
+    tracing::debug!("4 accepted a WebSocket Connect Token using {:?}", query_param.connect_token);
     if query_param.connect_token.is_none() {
-        return (StatusCode::BAD_REQUEST, "missing connect_token").into_response();
+        return (StatusCode::BAD_REQUEST).into_response();
+
     }
     let connect_token = match query_param.connect_token.as_deref() {
         Some(t) => t,
         None => {
-            return (StatusCode::BAD_REQUEST, "missing connect_token").into_response();
+            return (StatusCode::BAD_REQUEST).into_response();
         }   
     };
     if let Err(e) = handler::check_connect_token(web_context.clone(), connect_token).await {
         let resp: RtResponse<WsData> = e.into();
-        return (StatusCode::from_u16(resp.code as u16).unwrap_or(StatusCode::BAD_REQUEST), axum::Json(resp)).into_response();
+        tracing::debug!("connect_token 验证失败: {:?}", resp);
+        return (StatusCode::FORBIDDEN).into_response();
     }
     
     // 升级为 WebSocket 连接

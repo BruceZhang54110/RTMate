@@ -74,6 +74,7 @@ fn decode_token(token: &str, app_key: &str) -> Result<TokenData<Claims>, RtWsErr
 
 /// 校验 connect_token 的合法性
 pub async fn check_connect_token(web_context: Arc<WebContext>, connect_token: &str) -> Result<(), RtWsError> {
+    tracing::info!("校验 connect_token: {}", connect_token);
     // 从数据库中查询 connect_token 是否存在且未被使用
     let rt_client_connection = web_context.dao.get_rt_client_connection_by_token(connect_token)
         .await
