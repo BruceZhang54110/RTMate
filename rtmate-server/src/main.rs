@@ -2,7 +2,7 @@ use axum::{
     http::HeaderMap,
     extract::{
         ws::{self, WebSocketUpgrade},
-        }, http::{StatusCode, Version}, response::{Html, IntoResponse}, routing::any, Router
+        }, http::{StatusCode, Version}, response::{Html, IntoResponse}, routing::any, Router, Json
 };
 use axum::extract::Query;
 use std::{env, net::SocketAddr, path::PathBuf};
@@ -81,19 +81,26 @@ async fn ws_handler(
     tracing::debug!("3 accepted a WebSocket Query using {query_param:?}");
     tracing::debug!("4 accepted a WebSocket Connect Token using {:?}", query_param.connect_token);
     if query_param.connect_token.is_none() {
-        return (StatusCode::BAD_REQUEST).into_response();
+        // 在握手升级前直接返回带有业务错误信息的 JSON 响应
+        // let resp = RtResponse::<WsData>::err(400, "missing connect_token");
+        return (StatusCode::UNAUTHORIZED).into_response();
 
     }
     let connect_token = match query_param.connect_token.as_deref() {
         Some(t) => t,
         None => {
-            return (StatusCode::BAD_REQUEST).into_response();
+            return (StatusCode::UNAUTHORIZED).into_response();
         }   
     };
     if let Err(e) = handler::check_connect_token(web_context.clone(), connect_token).await {
         let resp: RtResponse<WsData> = e.into();
-        tracing::debug!("connect_token 验证失败: {:?}", resp);
+        tracing::debug!("check_connect_token is fail: {:?}", resp);
+        // 返回 403 与业务错误 JSON，客户端可读取 body 获得 message
+        if resp.code != 500 {
         return (StatusCode::FORBIDDEN).into_response();
+        } else {
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
     }
     
     // 升级为 WebSocket 连接
