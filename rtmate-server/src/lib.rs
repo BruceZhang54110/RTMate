@@ -5,6 +5,9 @@ pub mod dao_query;
 pub mod common;
 pub mod dto;
 pub mod web_context;
+pub mod bootstrap;
+pub mod handlers;
+pub mod routes;
 
 
 #[cfg(test)]
