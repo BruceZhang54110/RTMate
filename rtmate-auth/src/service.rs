@@ -8,6 +8,7 @@ use crate::web_context::WebContext;
 use jsonwebtoken::{encode, Header, EncodingKey};
 use rtmate_common::dto::Claims;
 use chrono::{Utc, Duration};
+use chrono::Local;
 use uuid::Uuid;
 use hmac::Hmac;
 use sha2::Sha256;
@@ -65,7 +66,7 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
         client_id: client_id_for_conn,
         connect_token: connect_token.clone(),
         used: false,
-        expire_time: None,
+        expire_time: Some(Local::now() + Duration::minutes(1)), // connect_token 2小时后过期
     };
     web_context
         .rt_app_repository
@@ -78,7 +79,7 @@ pub async fn auth_token(State(web_context): State<Arc<WebContext>>, Json(rt_app_
 }
 
 fn generate_jwt_token(app_id: &str, app_key_param: &str) -> anyhow::Result<String> {
-    let now = Utc::now();
+    let now = Local::now();
     let exp = now + Duration::hours(2); // token 2小时后过期
 
     // 1. 生成 client_id
@@ -86,7 +87,7 @@ fn generate_jwt_token(app_id: &str, app_key_param: &str) -> anyhow::Result<Strin
     // 2. 生成 jti
     let jti = Uuid::new_v4().as_simple().to_string();
     // 2. 生成 claims paypoad
-    let claims = Claims::new(app_id.to_string(), client_id, jti, now, exp);
+    let claims = Claims::new(app_id.to_string(), client_id, jti, now.to_utc(), exp.to_utc());
     let token = encode(&Header::default(), &claims, &EncodingKey::from_secret(app_key_param.as_ref()))?;
     Ok(token)
 }

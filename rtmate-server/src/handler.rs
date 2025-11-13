@@ -55,7 +55,7 @@ pub async fn handle_auth_app(web_context: Arc<WebContext>, payload: AuthPayload)
         return Err(RtWsError::biz(WsBizCode::AuthMismatch));
     }
     // 判断 token 是否过期
-    let now = chrono::Utc::now();
+    let now = chrono::Local::now();
     if claims.exp < now {
         return Err(RtWsError::biz(WsBizCode::ExpiredToken));
     }
@@ -81,7 +81,8 @@ pub async fn check_connect_token(web_context: Arc<WebContext>, connect_token: &s
         .map_err(|e| RtWsError::system("数据库查询失败", e))?
         .ok_or_else(|| RtWsError::biz(WsBizCode::InvalidConnectToken))?;
     // 判断是否过期
-    let now = chrono::Utc::now();
+    let now = chrono::Local::now();
+    tracing::debug!("当前时间: {}, 连接过期时间: {:?}", now, rt_client_connection.expire_time);
     if let Some(expire_time) = rt_client_connection.expire_time {
         if expire_time < now {
             return Err(RtWsError::biz(WsBizCode::ExpiredConnectToken));
