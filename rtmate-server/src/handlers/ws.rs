@@ -20,11 +20,11 @@ pub async fn ws_handler(
     debug!("4 accepted a WebSocket Connect Token using {:?}", query_param.connect_token);
 
     let connect_token = match query_param.connect_token.as_deref() {
-        Some(t) => t,
+        Some(t) => t.to_string(),
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    if let Err(e) = handler::check_connect_token(web_context.clone(), connect_token).await {
+    if let Err(e) = handler::check_connect_token(web_context.clone(), &connect_token).await {
         let resp: RtResponse<WsData> = e.into();
         debug!("check_connect_token is fail: {:?}", resp);
         return if resp.code != 500 {
@@ -34,8 +34,10 @@ pub async fn ws_handler(
         };
     }
 
-    ws.on_upgrade(|ws| async move {
+    ws.on_upgrade(move|ws| async move {
         debug!("WebSocket connection established");
+        // 将 connection_token 更新为已使用
+        handler::mark_connect_token_used(web_context.clone(), &connect_token);
         process_websocket(ws, web_context).await;
     })
 }
