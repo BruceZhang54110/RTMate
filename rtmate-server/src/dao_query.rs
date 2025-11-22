@@ -45,12 +45,14 @@ impl DaoQuery for Dao {
         let connect_token_query = query_connect_token.to_owned();
         use rtmate_common::schema::rt_client_connection::dsl::*;
         let result = pg_connection.interact(move |conn: &mut PgConnection| {
-            rt_client_connection
+            let result = rt_client_connection
                 .filter(connect_token.eq(connect_token_query))
                 .filter(used.eq(false))
+                .limit(1)
                 .select(RtClientConnection::as_select())
                 .first::<RtClientConnection>(conn)
-                .optional()
+                .optional();
+            result
         }).await.map_err(|e| anyhow::anyhow!("Query failed: {}", e))??;
         Ok(result)
     }

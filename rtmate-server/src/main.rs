@@ -4,6 +4,7 @@ use rtmate_server::{bootstrap, routes, web_context::WebContext};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
     // 初始化日志
     bootstrap::init_tracing();
 

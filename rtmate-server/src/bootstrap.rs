@@ -1,17 +1,18 @@
-use tracing_subscriber::{EnvFilter, fmt, registry};
-use tracing_subscriber::prelude::*; // bring SubscriberExt into scope for .with()
+use tracing_subscriber::{EnvFilter, fmt, registry, prelude::*, layer::SubscriberExt};
+use tracing_log::LogTracer;
 use std::sync::Arc;
 use crate::web_context::WebContext;
 use tracing_subscriber::fmt::time::LocalTime;
 use time::macros::format_description;
 
 pub fn init_tracing() {
+    // 先桥接 log 到 tracing
+    LogTracer::init().expect("Failed to set logger");
     let timer = LocalTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]"));
-
-    registry()
+    let subscriber = registry()
         .with(
             EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| format!("{}=debug", env!("CARGO_CRATE_NAME")).into()),
+                .unwrap_or_else(|_| format!("{}=info", env!("CARGO_CRATE_NAME")).into()),
         )
         .with(fmt::layer()
             .with_thread_ids(true)
