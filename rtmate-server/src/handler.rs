@@ -82,7 +82,7 @@ pub async fn check_connect_token(web_context: Arc<WebContext>, connect_token: &s
         .ok_or_else(|| RtWsError::biz(WsBizCode::InvalidConnectToken))?;
     // 判断是否过期
     let now = chrono::Local::now();
-    tracing::debug!("connection_token 过期时间: {:?}, 连接过期时间: {:?}", rt_client_connection.expire_time, now);
+    tracing::debug!("connection_token 过期时间: {:?}, 当前时间: {:?}", rt_client_connection.expire_time, now);
     if let Some(expire_time) = rt_client_connection.expire_time {
         if expire_time < now {
             return Err(RtWsError::biz(WsBizCode::ExpiredConnectToken));

@@ -7,9 +7,8 @@ use time::macros::format_description;
 
 pub fn init_tracing() {
     // 先桥接 log 到 tracing
-    LogTracer::init().expect("Failed to set logger");
     let timer = LocalTime::new(format_description!("[year]-[month]-[day] [hour]:[minute]:[second].[subsecond digits:3]"));
-    let subscriber = registry()
+    registry()
         .with(
             EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| format!("{}=info", env!("CARGO_CRATE_NAME")).into()),

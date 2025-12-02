@@ -6,6 +6,9 @@ pub struct WebContext {
 
     // 数据源
     pub dao: Dao,
+
+    // 连接管理器
+    
 }
 
 impl WebContext {
