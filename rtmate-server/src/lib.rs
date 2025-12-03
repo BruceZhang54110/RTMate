@@ -8,6 +8,7 @@ pub mod web_context;
 pub mod bootstrap;
 pub mod handlers;
 pub mod routes;
+pub mod manager;
 
 
 #[cfg(test)]
