@@ -21,6 +21,7 @@ pub enum WsBizCode {
     AuthMismatch,
     // 不支持的事件类型
     UnsupportedEvent,
+    ClientNotActive
 }
 
 impl WsBizCode {
@@ -35,6 +36,7 @@ impl WsBizCode {
             WsBizCode::SignatureInvalid => 1005,
             WsBizCode::AuthMismatch => 401,
             WsBizCode::UnsupportedEvent => 400,
+            WsBizCode::ClientNotActive => 422
         }
     }
     pub fn message(self) -> &'static str {
@@ -48,6 +50,7 @@ impl WsBizCode {
             WsBizCode::SignatureInvalid => "签名验证失败",
             WsBizCode::AuthMismatch => "认证失败（app_id 不匹配）",
             WsBizCode::UnsupportedEvent => "不支持的事件类型",
+            WsBizCode::ClientNotActive => "客户端连接未找到或已断开"
         }
     }
 }
