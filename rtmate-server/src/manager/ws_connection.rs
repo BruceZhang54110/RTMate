@@ -74,6 +74,7 @@ impl ConnectionManager {
         }
     }
 
+    /// 订阅频道
     fn subscribe(&self, client_id: ClientId, channel_id: ChannelId) -> Result<(), RtWsError> {
         let conn_arc = match self.connections.get(&client_id) {
             Some(entry) => entry.value().clone(),
@@ -86,6 +87,31 @@ impl ConnectionManager {
             });
         let channel_map = channel_map_entry.value();
         channel_map.insert(client_id.clone(), conn_arc);
+        Ok(())
+    }
+
+    /// 取消订阅
+    fn un_subscribe(&self, client_id: ClientId, channel_id: ChannelId) -> Result<(), RtWsError> {
+        let should_cleanup = {
+            let mut inner_map_entry = match self.channels.get_mut(&channel_id) {
+                Some(entry) => entry,
+                None => {
+                    return Err(RtWsError::biz(WsBizCode::ChannelNotFound));
+                }
+            };
+            let inner_map = inner_map_entry.value_mut();
+            if inner_map.remove(&client_id).is_none() {
+                drop(inner_map_entry); // // 明确释放锁
+                return Err(RtWsError::biz(WsBizCode::NotSubscribed));
+            }
+            let is_empty = inner_map.is_empty();
+            is_empty
+        };
+        if should_cleanup {
+            self.channels.remove(&channel_id);
+            tracing::info!("Channel '{}' is empty and has been removed.", channel_id);
+        }
+        tracing::info!("Client '{}' unsubscribed from channel '{}'.", client_id, channel_id);
         Ok(())
     }
 }

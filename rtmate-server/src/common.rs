@@ -21,7 +21,9 @@ pub enum WsBizCode {
     AuthMismatch,
     // 不支持的事件类型
     UnsupportedEvent,
-    ClientNotActive
+    ClientNotActive,
+    ChannelNotFound,
+    NotSubscribed,
 }
 
 impl WsBizCode {
@@ -36,7 +38,9 @@ impl WsBizCode {
             WsBizCode::SignatureInvalid => 1005,
             WsBizCode::AuthMismatch => 401,
             WsBizCode::UnsupportedEvent => 400,
-            WsBizCode::ClientNotActive => 422
+            WsBizCode::ClientNotActive => 422,
+            WsBizCode::ChannelNotFound => 424,
+            WsBizCode::NotSubscribed => 431,
         }
     }
     pub fn message(self) -> &'static str {
@@ -50,7 +54,9 @@ impl WsBizCode {
             WsBizCode::SignatureInvalid => "签名验证失败",
             WsBizCode::AuthMismatch => "认证失败（app_id 不匹配）",
             WsBizCode::UnsupportedEvent => "不支持的事件类型",
-            WsBizCode::ClientNotActive => "客户端连接未找到或已断开"
+            WsBizCode::ClientNotActive => "客户端连接未找到或已断开",
+            WsBizCode::ChannelNotFound => "频道不存在",
+            WsBizCode::NotSubscribed => "未订阅"
         }
     }
 }
