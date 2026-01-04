@@ -4,22 +4,23 @@
 
 ### ClientConnection
 
-代表由 `ConnectionManager` 管理的一条 WebSocket 客户端连接。
+代表由 `ConnectionManager` 管理的一条 WebSocket 客户端连接。连接池通过 `client_id` 作为唯一键管理具体的连接。
 
 **关键字段（概念层面）:**
 
-- `client_id` (String): 节点内唯一的连接标识，用作连接映射表的键，也用于日志与追踪。
-- `rt_app` (String): 由已验证的 connect token 推导出的应用标识；在本特性中也是按应用维度
-  限制并发连接的业务键。
-- `connect_token` (String): 本次连接建立时使用的一次性 token；仅在必要时用于审计 / 调试，
+- `client_id` (Arc<String>): 节点内唯一的连接标识，用作连接池映射表的键。由 Auth 认证成功后生成或从认证信息中提取。
+- `rt_app` (String): 租户标识（应用标识），通过 Auth 事件认证后获得。用于：
+  - 关联连接到特定租户
+  - 按租户维度统计并发连接数，支持按租户限制最大连接数
+- `connect_token` (String): 本次 WebSocket 连接建立时使用的一次性 token；仅在必要时用于审计 / 调试，
   不允许在日志中以明文形式出现。
-- `state` (Enum): 连接生命周期的逻辑状态，如 `Connecting`、`Authenticating`、`Ready`、
-  `Closed(reason)` 等；现有代码中可能隐式存在，实施过程中建议逐步演进为显式枚举。
-- `sender` (Channel): 指向客户端的消息发送通道句柄，用于服务器向客户端推送消息。
-- `created_at` (Timestamp)【概念字段】: 连接注册的时间点。
-- `closed_at` (Timestamp, optional)【概念字段】: 连接被关闭的时间点。
-- `close_reason` (Enum/String, optional)【概念字段】: 连接被关闭的原因（如正常关闭、错误、
-  空闲超时、并发限制等）。
+- `sender` (mpsc::Sender): 指向客户端的消息发送通道句柄，用于服务器向该客户端推送消息。
+- `authenticated_at` (Timestamp)【可选字段】: 认证成功并加入连接池的时间点。
+
+**设计说明:**
+- 连接池中的连接已经完成认证，**不需要状态枚举字段**
+- 未认证的连接不会进入连接池，直接在 ws.rs 中关闭
+- 关闭原因通过日志记录，不需要在结构体中持久化
 
 ### ConnectionManager
 
@@ -49,11 +50,10 @@
 
 ## Validation Rules
 
-- `client_id` 在同一运行节点内必须唯一；对于使用相同 `client_id` 注册新连接的场景，
-  实现需要在“替换旧连接”与“拒绝新连接”之间进行策略选择，并保持行为一致。
-- 在连接被视为 `Ready` 之前，必须已经获得合法的 `rt_app`（即来源于已通过验证的
-  connect token），否则不允许作为“可用连接”参与业务消息处理。
-- 当连接被移除时，其所有关联的频道订阅信息必须同时从 `channels` 与 `subscriptions`
+- `client_id` 在同一运行节点内必须唯一；由 Auth 事件认证成功后生成（通常从 JWT token 的 claims 中提取）。
+- 连接必须先完成 Auth 事件认证，获得合法的 `rt_app`，才能创建 `ClientConnection` 并加入连接池。
+- 认证失败、超时或第一条消息不是 Auth 事件的连接，直接关闭，不进入连接池。
+- 当连接从连接池移除时，其所有关联的频道订阅信息必须同时从 `channels` 与 `subscriptions`
   映射中清理，避免内存泄漏与订阅状态错乱。
-- 当为某个 `rt_app` 配置了最大并发连接数时，超过该上限的新建连接尝试必须被拒绝
-  或立即关闭，并记录对应的关闭原因，供后续排查与审计使用。
+- 当为某个 `rt_app` 配置了最大并发连接数时，超过该上限的新认证请求必须被拒绝，
+  并在日志中记录原因，供后续排查与审计使用。
