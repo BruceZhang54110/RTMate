@@ -48,14 +48,14 @@ impl ConnectionManager {
     }
 
     pub fn add_connection(&self, conn: ClientConnection) -> ClientId {
-        // 1. 【解构】消费 conn 的所有权，并将字段的所有权转移到局部变量。
+        // 1. 【解构】消耗 conn 的所有权，并将字段的所有权转移到局部变量。
         let ClientConnection {
             client_id,
             rt_app,
             connect_token,
             sender,
-        } = conn; // conn 变量在这里被消费，没有部分移动的歧义。
-
+        } = conn; // conn 变量在这里被消耗，没有部分移动的歧义。
+    
         let client_id_for_key = client_id.clone();
         let cc_arc = Arc::new(
             ClientConnection {
@@ -67,9 +67,14 @@ impl ConnectionManager {
         self.connections.insert(client_id_for_key.clone(), cc_arc);
         client_id_for_key
     }
+    
+    /// 查询连接是否存在
+    pub fn get_connection(&self, client_id: &ClientId) -> Option<Arc<ClientConnection>> {
+        self.connections.get(client_id).map(|entry| entry.value().clone())
+    }
 
     /// 移除连接，并清理其所有订阅记录
-    fn remove_connection(&self, client_id: &ClientId) {
+    pub fn remove_connection(&self, client_id: &ClientId) {
         if self.connections.remove(client_id).is_none() {
             tracing::warn!("Attempted to remove non-existent client: {}", client_id);
             return;

@@ -33,9 +33,9 @@
 
 **Purpose**: 确保依赖和基础配置就绪
 
-- [ ] T001 验证 Rust 版本 >= 1.79，确认 Tokio、Axum、DashMap 依赖已在 rtmate-server/Cargo.toml 中
-- [ ] T002 [P] 检查 .env 配置文件，确认 WebSocket 地址和端口配置存在
-- [ ] T003 [P] 运行 `cargo build` 确保当前代码编译通过
+- [x] T001 验证 Rust 版本 >= 1.79，确认 Tokio、Axum、DashMap 依赖已在 rtmate-server/Cargo.toml 中
+- [x] T002 [P] 检查 .env 配置文件，确认 WebSocket 地址和端口配置存在
+- [x] T003 [P] 运行 `cargo build` 确保当前代码编译通过
 
 ---
 
@@ -47,14 +47,14 @@
 
 ### 基础结构扩展（简化版）
 
-- [ ] T004 在 rtmate-server/src/manager/ws_connection.rs 中为 ConnectionManager 的 remove_connection 方法改为 pub，供外部调用
-- [ ] T005 [P] 在 rtmate-server/src/manager/ws_connection.rs 中为 ConnectionManager 添加 get_connection 方法，用于查询连接是否存在
+- [x] T004 在 rtmate-server/src/manager/ws_connection.rs 中为 ConnectionManager 的 remove_connection 方法改为 pub，供外部调用
+- [x] T005 [P] 在 rtmate-server/src/manager/ws_connection.rs 中为 ConnectionManager 添加 get_connection 方法，用于查询连接是否存在
 
 ### WebContext 依赖注入
 
-- [ ] T006 在 rtmate-server/src/web_context.rs 中添加 ConnectionManager 字段（使用 Arc<ConnectionManager>）
-- [ ] T007 在 rtmate-server/src/web_context.rs 的 new 方法中初始化 ConnectionManager 实例
-- [ ] T008 在 rtmate-server/src/manager/mod.rs 中导出 ConnectionManager 和 ClientConnection 类型
+- [x] T006 在 rtmate-server/src/web_context.rs 中添加 ConnectionManager 字段（使用 Arc<ConnectionManager>）
+- [x] T007 在 rtmate-server/src/web_context.rs 的 new 方法中初始化 ConnectionManager 实例
+- [x] T008 在 rtmate-server/src/manager/mod.rs 中导出 ConnectionManager 和 ClientConnection 类型
 
 **Checkpoint**: 基础设施完成 - 用户故事实现现在可以开始
 
@@ -119,7 +119,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T025 [US3] 在 .env 或配置模块中添加 MAX_CONNECTIONS_PER_APP 配置项
+- [ ] T025 [US3] 在 .env 或配置模块中添加 MAX_CONNECTIONS_PER_RT_APP 配置项（指定每个租户的最大并发连接数）
 - [ ] T026 [US3] 在 rtmate-server/src/manager/ws_connection.rs 中为 ConnectionManager 添加 app_connection_counts: DashMap<String, usize> 字段
 - [ ] T027 [US3] 在 rtmate-server/src/manager/ws_connection.rs 的 add_connection 方法中，检查当前 rt_app 的连接数是否超过限制
 - [ ] T028 [US3] 在 rtmate-server/src/manager/ws_connection.rs 的 add_connection 方法中，如果超限则返回错误
@@ -224,7 +224,7 @@ Task: "在 ClientConnection 添加 close_reason 字段"
 1. 团队一起完成 Setup + Foundational
 2. Foundational 完成后:
    - 开发者 A: User Story 1（认证与连接池）
-   - 开发者 B: User Story 3（并发限制与空闲超时）
+   - 开发者 B: User Story 3（按租户维度的并发限制）
 3. 故事独立完成并集成
 
 ---
@@ -262,6 +262,6 @@ Task: "在 ClientConnection 添加 close_reason 字段"
 | User Story 3 | 12+2 | 7+1 | -6 |
 
 **个收获**:
-- ✅ 移除了空闲超时检测相关任务（T006, T033-T035, T037）
+- ✅ 跳过了空闲超时检测相关任务（不实现空闲超时）
 - ✅ Foundational 中不再需要 `last_activity_at` 字段
-- ✅ US3 从 10+2 需求简化为 7+1 需求
+- ✅ US3 从 10+2 需求简化为 7+1 需求（加强了租户维度数据绑定）

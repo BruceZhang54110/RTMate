@@ -6,11 +6,11 @@
 ## Summary
 
 本特性将在 `rtmate-server` 中基于现有的 `ClientConnection` 与 `ConnectionManager`，
-为每条 WebSocket 连接建立明确的生命周期管理：在连接建立时注册连接记录，在认证完成后绑定应用与身份上下文，
-并为后续的每应用并发限制与空闲超时清理预留钩子。
+为每条 WebSocket 连接建立明确的生命周期管理：WebSocket 连接建立后亍需管理（暂不应整上连接池），
+在认证完成后整上连接池，并为后续的每租户并发限制提供基础支持。
 
-连接建立后，会生成唯一的 `client_id` 与应用标识 `rt_app`，并注册到全局的 `ConnectionManager` 中；
-随着功能演进，连接管理器将成为频道订阅、连接清理与资源保护的集中入口。
+连接建立后，会询门官对凭证进行认证，认证成功整上连接池并产起应用标识 `rt_app`，
+未认证连接直接关闭。其后，连接管理器将成为频道订阅、连接清理与资源保护的集中入口。
 
 ## Technical Context
 
@@ -28,7 +28,7 @@ DashMap / DashSet（线程安全的内存 Map/Set）、Serde（用于协议 JSON
 连接注册与查找维持 O(1) 的时间复杂度；暂不设定精确延迟 SLO，只要求不明显劣于当前简单实现  
 **Constraints**: WebSocket 处理流程中禁止阻塞 IO；不得改变现有 JSON Envelope 协议对外表现；
 新的连接跟踪逻辑必须遵守多 crate 边界（不将重型类型泄露到 `rtmate-common`）  
-**Scale/Scope**: 范围限定为「单节点」连接管理：生命周期跟踪、认证上下文绑定以及并发 / 空闲控制钩子；
+**Scale/Scope**: 范围限定为「单节点」连接管理：生命周期跟踪、认证上下文绑定以及并发限制支持；
 跨节点 Presence、分布式房间和高级限流明确不在本次范围之内。
 
 ## Constitution Check
