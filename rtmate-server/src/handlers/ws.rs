@@ -1,11 +1,16 @@
 use std::sync::Arc;
-use axum::{extract::{ws::{WebSocketUpgrade, WebSocket, self}, Query, State}, http::{HeaderMap, StatusCode, Version}, response::IntoResponse};
+use axum::{extract::{Query, State, ws::{self, CloseCode, CloseFrame, Message, WebSocket, WebSocketUpgrade, close_code}}, http::{HeaderMap, StatusCode, Version}, response::IntoResponse};
 use axum::response::Response;
 use tracing::debug;
 use crate::web_context::WebContext;
 use crate::dto::{QueryParam, WsData};
 use rtmate_common::response_common::RtResponse;
 use crate::handler; // existing business handler functions
+
+enum ConnectKind {
+    Connect(String),
+    Reconnect(String)
+}
 
 pub async fn ws_handler(
     State(web_context): State<Arc<WebContext>>,
@@ -14,9 +19,6 @@ pub async fn ws_handler(
     headers: HeaderMap,
     query_param: Query<QueryParam>,
 ) -> Response {
-    debug!("1 accepted a WebSocket using {:?}", version);
-    debug!("2 accepted a WebSocket Header using {:?}", headers);
-    debug!("3 accepted a WebSocket Query using {:?}", query_param);
     debug!("4 accepted a WebSocket Connect Token using {:?}", query_param.connect_token);
 
     let connect_token = match query_param.connect_token.as_deref() {
@@ -34,10 +36,21 @@ pub async fn ws_handler(
         };
     }
 
-    ws.on_upgrade(move|ws| async move {
+    ws.on_upgrade(move|mut ws| async move {
         debug!("WebSocket connection established");
         // 将 connection_token 更新为已使用
-        let _a =  handler::mark_connect_token_used(web_context.clone(), &connect_token).await;
+        if let Err(e) =  handler::mark_connect_token_used(web_context.clone(), &connect_token).await {
+            // 如果报错就关闭websocket
+            tracing::error!("mark_connect_token_used error:{}", e);
+            let close_msg = Message::Close(Some(CloseFrame {
+                code: close_code::ERROR,
+                reason: e.message().into(),
+            }));
+            let _ = ws.send(close_msg).await;
+            return ;
+        }
+        tracing::debug!("连接成功, connect_token:{}", connect_token);
+        // 连接成功，下发一个 reconnect_token，用于后续的重连
         process_websocket(ws, web_context).await;
     })
 }
