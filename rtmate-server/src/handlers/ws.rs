@@ -1,11 +1,14 @@
 use std::sync::Arc;
-use axum::{extract::{Query, State, ws::{self, CloseCode, CloseFrame, Message, WebSocket, WebSocketUpgrade, close_code}}, http::{HeaderMap, StatusCode, Version}, response::IntoResponse};
+use axum::{extract::{Query, State, ws::{self, CloseFrame, Message, WebSocket, WebSocketUpgrade, close_code}}, http::{HeaderMap, StatusCode, Version}, response::IntoResponse};
 use axum::response::Response;
 use tracing::debug;
 use crate::web_context::WebContext;
 use crate::dto::{QueryParam, WsData};
 use rtmate_common::response_common::RtResponse;
-use crate::handler; // existing business handler functions
+use crate::handlers::auth;
+use crate::req::{RequestParam, RequestEvent};
+use crate::common::{RtWsError, WsBizCode};
+
 
 enum ConnectKind {
     Connect(String),
@@ -15,8 +18,8 @@ enum ConnectKind {
 pub async fn ws_handler(
     State(web_context): State<Arc<WebContext>>,
     ws: WebSocketUpgrade,
-    version: Version,
-    headers: HeaderMap,
+    _version: Version,
+    _headers: HeaderMap,
     query_param: Query<QueryParam>,
 ) -> Response {
     debug!("4 accepted a WebSocket Connect Token using {:?}", query_param.connect_token);
@@ -26,7 +29,7 @@ pub async fn ws_handler(
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
 
-    if let Err(e) = handler::check_connect_token(web_context.clone(), &connect_token).await {
+    if let Err(e) = auth::check_connect_token(web_context.clone(), &connect_token).await {
         let resp: RtResponse<WsData> = e.into();
         debug!("check_connect_token is fail: {:?}", resp);
         return if resp.code != 500 {
@@ -39,7 +42,7 @@ pub async fn ws_handler(
     ws.on_upgrade(move|mut ws| async move {
         debug!("WebSocket connection established");
         // 将 connection_token 更新为已使用
-        if let Err(e) =  handler::mark_connect_token_used(web_context.clone(), &connect_token).await {
+        if let Err(e) =  auth::mark_connect_token_used(web_context.clone(), &connect_token).await {
             // 如果报错就关闭websocket
             tracing::error!("mark_connect_token_used error:{}", e);
             let close_msg = Message::Close(Some(CloseFrame {
@@ -60,7 +63,7 @@ async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
         match ws.recv().await {
             Some(Ok(ws::Message::Text(s))) => {
                 let websocket_msg = s.to_string();
-                let resp: RtResponse<WsData> = handler::handle_msg(web_context.clone(), &websocket_msg)
+                let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg)
                     .await
                     .unwrap_or_else(|e| e.into());
 
@@ -91,5 +94,27 @@ async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
             }
             None => break,
         }
+    }
+}
+
+/// 处理websocket  客户端传入的消息
+pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str) -> Result<RtResponse<WsData>, RtWsError> {
+    // 1. 解析 JSON -> 业务错误
+    let param: RequestParam = serde_json::from_str(websocket_msg)
+        .map_err(|_| RtWsError::biz(WsBizCode::InvalidParams))?;
+    // 2. 分发事件并得到领域结果
+    let ws_data = process_event(web_context, param.event).await?;
+    // 3. 成功统一包装
+    Ok(RtResponse::ok_with_data(ws_data))
+}
+
+async fn process_event(web_context: Arc<WebContext>, event: RequestEvent) -> Result<WsData, RtWsError> {
+    match event {
+        RequestEvent::Auth(payload) => {
+            let data = auth::handle_auth_app(web_context, payload).await?;
+            Ok(WsData::Auth(data))
+        }
+        // TODO: 未来新增事件，在此直接返回 WsData
+        _ => Err(RtWsError::biz(WsBizCode::UnsupportedEvent)),
     }
 }
