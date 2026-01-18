@@ -3,7 +3,8 @@ use tokio::sync::mpsc;
 use std::sync::Arc;
 use crate::common::RtWsError;
 use crate::common::WsBizCode;
-use crate::req::MessageSendPayload;
+use rtmate_common::response_common::RtResponse;
+use crate::dto::WsData;
 use dashmap::DashSet;
 
 
@@ -18,10 +19,10 @@ pub struct ClientConnection {
     /// client_id
     pub client_id: Arc<String>,
     /// 连接ws 的connect token
-    pub connect_token: String,
+    pub connect_token: Option<String>,
 
     // 发送消息
-    pub sender: mpsc::Sender<MessageSendPayload>
+    pub sender: mpsc::Sender<RtResponse<WsData>>
 
 }
 
