@@ -3,9 +3,8 @@ use tokio::sync::mpsc;
 use std::sync::Arc;
 use crate::common::RtWsError;
 use crate::common::WsBizCode;
-use rtmate_common::response_common::RtResponse;
-use crate::dto::WsData;
 use dashmap::DashSet;
+use crate::dto::OutboundMessage;
 
 
 type ClientId = Arc<String>;
@@ -24,7 +23,7 @@ pub struct ClientConnection {
     pub connect_token: Option<String>,
 
     // 发送消息
-    pub sender: mpsc::Sender<RtResponse<WsData>>
+    pub sender: mpsc::Sender<OutboundMessage>
 
 }
 
@@ -79,7 +78,7 @@ impl ConnectionManager {
     }
     
     /// 查询连接是否存在
-    pub fn get_connection(&self, client_id: &ClientId) -> Option<Arc<ClientConnection>> {
+    pub fn get_connection(&self, client_id: &String) -> Option<Arc<ClientConnection>> {
         self.connections.get(client_id).map(|entry| entry.value().clone())
     }
 
@@ -183,7 +182,7 @@ impl ConnectionManager {
     }
 
     // 获取连接池连接数
-    fn get_app_connections_count(&self, app_id: AppId) -> usize {
+    pub fn get_app_connections_count(&self, app_id: AppId) -> usize {
         self.app_connections.get(&app_id)
             .map(|set| set.len())
             .unwrap_or(0)

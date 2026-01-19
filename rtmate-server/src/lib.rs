@@ -1,5 +1,4 @@
 pub mod req;
-pub mod handler;
 pub mod store;
 pub mod dao_query;
 pub mod common;
@@ -16,8 +15,6 @@ mod tests {
     use super::*;
     use hmac::Mac;
     use uuid::Uuid;
-    use std::time::UNIX_EPOCH;
-    use std::time::SystemTime;
     use hmac::Hmac;
     use sha2::Sha256;
     type HmacSha256 = Hmac<Sha256>;

@@ -4,11 +4,12 @@ use rtmate_common::response_common::RtResponse;
 use tokio::sync::mpsc::Sender;
 use crate::common::{RtWsError, WsBizCode};
 use crate::dao_query::DaoQuery;
-use crate::dto::{AuthResponse, WsData};
+use crate::dto::{AuthResponse, WsData, OutboundMessage};
 use crate::manager::ClientConnection;
 use crate::req::{AuthPayload};
 use jsonwebtoken::{DecodingKey, Validation, Algorithm};
 use rtmate_common::dto::Claims;
+
 use std::sync::Arc;
 use crate::web_context::WebContext;
 use crate::handlers::auth;
@@ -24,13 +25,17 @@ pub struct AuthResult {
 /// 处理应用认证，验证 jwt token
 pub async fn handle_auth_and_register(web_context: Arc<WebContext>
     , payload: AuthPayload
-    , ws_sender: Sender<RtResponse<WsData>>)
+    , ws_sender: Sender<OutboundMessage>)
          -> Result<AuthResponse, RtWsError> {
     let auth_result = validate_client(web_context.clone(), payload).await?;
     tracing::info!("app_id: [{}], client_id: [{}]认证通过", &auth_result.app_id, &auth_result.client_id);
     // Ok(AuthResponse::new(true, client_id))
     let client_id = auth_result.client_id.clone();
     auth::register_connection(web_context.clone(), auth_result, ws_sender).await?;
+    if let Some(conn) = web_context.connection_manager.get_connection(&client_id) {
+        let msg = RtResponse::ok_with_data(WsData::Auth(AuthResponse::new(false, client_id.clone())));
+        let _ = conn.sender.send(OutboundMessage::Response(msg)).await.is_ok();
+    }
     Ok(AuthResponse::new(true, client_id))
 }
 
@@ -112,7 +117,7 @@ pub async fn mark_connect_token_used(web_context: Arc<WebContext>, connect_token
 /// auth 通过后注册websocket 连接到连接池中
 pub async fn register_connection(web_context: Arc<WebContext>
         , auth_result: AuthResult
-        , ws_sender: Sender<RtResponse<WsData>>) -> Result<(), RtWsError> {
+        , ws_sender: Sender<OutboundMessage>) -> Result<(), RtWsError> {
             let connection_manager = web_context.connection_manager.clone();
             let client_id= Arc::new(auth_result.client_id);
             if connection_manager.get_connection(&client_id).is_some() {
@@ -120,11 +125,13 @@ pub async fn register_connection(web_context: Arc<WebContext>
             }
             let conn = ClientConnection {
                 client_id: client_id,
-                rt_app: auth_result.app_id,
+                rt_app: auth_result.app_id.clone(),
                 connect_token: None,
                 sender: ws_sender
             };
             connection_manager.add_connection(conn);
+            let app_connections_count = connection_manager.get_app_connections_count(Arc::new(auth_result.app_id.clone()));
+            tracing::info!("app:{}, client 连接数:{}", auth_result.app_id, app_connections_count);
             Ok(())
 
 }

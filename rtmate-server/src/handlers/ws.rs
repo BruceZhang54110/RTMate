@@ -3,14 +3,14 @@ use axum::{extract::{Query, State, ws::{self, CloseFrame, Message, WebSocket, We
 use axum::response::Response;
 use tracing::debug;
 use crate::web_context::WebContext;
-use crate::dto::{QueryParam, WsData};
+use crate::dto::{QueryParam, WsData, OutboundMessage};
 use rtmate_common::response_common::RtResponse;
 use crate::handlers::auth;
 use crate::req::{RequestParam, RequestEvent};
 use crate::common::{RtWsError, WsBizCode};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::mpsc;
-
+use futures_util::{SinkExt, StreamExt};
 
 enum ConnectKind {
     Connect(String),
@@ -63,27 +63,38 @@ pub async fn ws_handler(
 }
 
 async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
-    let (tx, mut _rx) = mpsc::channel::<RtResponse<WsData>>(100); 
+    let (mut sink, mut stream) = ws.split();
+    let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100); 
+    // 后台消息发送
+    let mut _task = tokio::spawn(async move {
+        while let Some(out_msg) = rx.recv().await {
+            let ws_msg = match out_msg {
+                OutboundMessage::Response(resp) => {
+                    match  serde_json::to_string(&resp) {
+                        Ok(json) => Message::Text(json.into()),
+                        Err(_) => continue,   
+                    }
+                }
+                OutboundMessage::Raw(raw) => raw,
+                
+            };
+            if (sink.send(ws_msg)).await.is_err() {
+                break;
+            }
+        }
+    });
     loop {
-        match ws.recv().await {
+        match stream.next().await {
             Some(Ok(ws::Message::Text(s))) => {
                 let websocket_msg = s.to_string();
                 let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg, tx.clone())
                     .await
                     .unwrap_or_else(|e| e.into());
-
-                match serde_json::to_string(&resp) {
-                    Ok(text) => {
-                        debug!("Sending ws response: {}", text);
-                        if let Err(e) = ws.send(ws::Message::Text(text.into())).await {
-                            debug!("failed to send ws response: {e}");
-                        }
-                    }
-                    Err(e) => tracing::error!("serialize ws response failed: {}", e),
-                }
+                let _ = tx.send(OutboundMessage::Response(resp)).await;
+                
             }
             Some(Ok(ws::Message::Ping(ping_byte))) => {
-                if let Err(e) = ws.send(ws::Message::Pong(ping_byte)).await {
+                if let Err(e) = tx.send(OutboundMessage::Raw(Message::Pong(ping_byte))).await {
                     debug!("failed to send Pong message from server: {e}");
                     break;
                 }
@@ -100,10 +111,11 @@ async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
             None => break,
         }
     }
+    
 }
 
 /// 处理websocket  客户端传入的消息
-pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str, ws_sender: Sender<RtResponse<WsData>>) -> Result<RtResponse<WsData>, RtWsError> {
+pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str, ws_sender: Sender<OutboundMessage>) -> Result<RtResponse<WsData>, RtWsError> {
     // 1. 解析 JSON -> 业务错误
     let param: RequestParam = serde_json::from_str(websocket_msg)
         .map_err(|_| RtWsError::biz(WsBizCode::InvalidParams))?;
@@ -115,7 +127,7 @@ pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str, ws_se
 
 async fn process_event(web_context: Arc<WebContext>
     , event: RequestEvent
-    , ws_sender:Sender<RtResponse<WsData>>) -> Result<WsData, RtWsError> {
+    , ws_sender:Sender<OutboundMessage>) -> Result<WsData, RtWsError> {
     match event {
         RequestEvent::Auth(payload) => {
             let data = auth::handle_auth_and_register(web_context, payload, ws_sender).await?;
