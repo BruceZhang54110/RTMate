@@ -1,5 +1,15 @@
 use serde::Serialize;
 use serde::Deserialize;
+use axum::extract::ws::Message;
+use rtmate_common::response_common::RtResponse;
+
+pub enum OutboundMessage {
+    /// 业务响应，需要序列化为JSON
+    Response(RtResponse<WsData>),
+    /// 原生websocket消息
+    Raw(Message),
+}
+
 
 #[derive(Serialize, Debug)]
 pub struct AuthResponse {

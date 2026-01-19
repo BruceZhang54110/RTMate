@@ -27,5 +27,7 @@ diesel = { workspace = true, features = ["postgres", "chrono"]}
 time = { workspace = true }
 tracing-log = { workspace = true }
 dashmap = { workspace = true }
+futures-util = { workspace = true }
+
 
 

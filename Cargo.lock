@@ -1515,6 +1515,7 @@ dependencies = [
  "dashmap",
  "diesel",
  "dotenvy",
+ "futures-util",
  "hex",
  "hmac",
  "jsonwebtoken",
