@@ -11,6 +11,8 @@ use dashmap::DashSet;
 type ClientId = Arc<String>;
 type ChannelId = Arc<String>;
 type ChannelSet = DashSet<ChannelId>;
+type AppId = Arc<String>;
+type ClientIdSet = DashSet<ClientId>;
 
 /// 客户端连接
 pub struct ClientConnection {
@@ -31,7 +33,8 @@ pub struct ClientConnection {
 pub struct ConnectionManager {
     /// 连接
     connections: DashMap<ClientId, Arc<ClientConnection>>,
-
+    // 保存每个租户下的客户端
+    app_connections: DashMap<AppId, ClientIdSet>,
     /// 频道
     channels: DashMap<ChannelId, DashMap<ClientId, Arc<ClientConnection>>>,
     /// 每个客户端订阅的频道
@@ -43,6 +46,7 @@ impl ConnectionManager {
     pub fn new() -> Self {
         ConnectionManager { 
             connections: DashMap::new(),
+            app_connections: DashMap::new(),
             channels: DashMap::new(),
             subscriptions: DashMap::new()
         }
@@ -58,6 +62,8 @@ impl ConnectionManager {
         } = conn; // conn 变量在这里被消耗，没有部分移动的歧义。
     
         let client_id_for_key = client_id.clone();
+        let app_id = Arc::new(rt_app.clone());
+
         let cc_arc = Arc::new(
             ClientConnection {
             client_id,
@@ -66,6 +72,9 @@ impl ConnectionManager {
             sender,
         });
         self.connections.insert(client_id_for_key.clone(), cc_arc);
+        self.app_connections.entry(app_id)
+            .or_insert_with(DashSet::new)
+            .insert(client_id_for_key.clone());
         client_id_for_key
     }
     
@@ -76,7 +85,16 @@ impl ConnectionManager {
 
     /// 移除连接，并清理其所有订阅记录
     pub fn remove_connection(&self, client_id: &ClientId) {
-        if self.connections.remove(client_id).is_none() {
+        if let Some((_, conn))  = self.connections.remove(client_id) {
+            let app_id = Arc::new(conn.rt_app.clone());
+            if let Some(set) = self.app_connections.get(&app_id) {
+                set.remove(client_id);
+                if set.is_empty() {
+                    drop(set); // 释放锁
+                    self.app_connections.remove(&app_id);
+                }
+            }
+        } else {
             tracing::warn!("Attempted to remove non-existent client: {}", client_id);
             return;
         }
@@ -162,5 +180,12 @@ impl ConnectionManager {
         }
         tracing::info!("Client '{}' unsubscribed from channel '{}'.", client_id, channel_id);
         Ok(())
+    }
+
+    // 获取连接池连接数
+    fn get_app_connections_count(&self, app_id: AppId) -> usize {
+        self.app_connections.get(&app_id)
+            .map(|set| set.len())
+            .unwrap_or(0)
     }
 }

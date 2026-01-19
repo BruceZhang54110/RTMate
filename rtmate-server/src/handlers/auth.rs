@@ -5,13 +5,13 @@ use tokio::sync::mpsc::Sender;
 use crate::common::{RtWsError, WsBizCode};
 use crate::dao_query::DaoQuery;
 use crate::dto::{AuthResponse, WsData};
-use crate::handlers::auth;
 use crate::manager::ClientConnection;
 use crate::req::{AuthPayload};
 use jsonwebtoken::{DecodingKey, Validation, Algorithm};
 use rtmate_common::dto::Claims;
 use std::sync::Arc;
 use crate::web_context::WebContext;
+use crate::handlers::auth;
 
 pub struct AuthResult {
     // 租户下的client
@@ -29,9 +29,9 @@ pub async fn handle_auth_and_register(web_context: Arc<WebContext>
     let auth_result = validate_client(web_context.clone(), payload).await?;
     tracing::info!("app_id: [{}], client_id: [{}]认证通过", &auth_result.app_id, &auth_result.client_id);
     // Ok(AuthResponse::new(true, client_id))
-    //auth::register_connection();
-
-    todo!()
+    let client_id = auth_result.client_id.clone();
+    auth::register_connection(web_context.clone(), auth_result, ws_sender).await?;
+    Ok(AuthResponse::new(true, client_id))
 }
 
 /// 验证 jwt token
