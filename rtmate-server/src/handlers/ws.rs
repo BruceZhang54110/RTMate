@@ -12,11 +12,6 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::mpsc;
 use futures_util::{SinkExt, StreamExt};
 
-enum ConnectKind {
-    Connect(String),
-    Reconnect(String)
-}
-
 pub async fn ws_handler(
     State(web_context): State<Arc<WebContext>>,
     ws: WebSocketUpgrade,
@@ -63,9 +58,10 @@ pub async fn ws_handler(
 }
 
 async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
+    // 分离发送和接收, 以便同时处理, sink 独占写权限, stream 独占读权限
     let (mut sink, mut stream) = ws.split();
     let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100); 
-    // 后台消息发送
+    // 后端消息发送到客户端
     let mut _task = tokio::spawn(async move {
         while let Some(out_msg) = rx.recv().await {
             let ws_msg = match out_msg {
@@ -78,11 +74,13 @@ async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
                 OutboundMessage::Raw(raw) => raw,
                 
             };
+            // 发送消息给客户端
             if (sink.send(ws_msg)).await.is_err() {
                 break;
             }
         }
     });
+    // 接收websocket 消息
     loop {
         match stream.next().await {
             Some(Ok(ws::Message::Text(s))) => {
@@ -90,6 +88,7 @@ async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
                 let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg, tx.clone())
                     .await
                     .unwrap_or_else(|e| e.into());
+                // 通过通道发送websocket消息给客户端
                 let _ = tx.send(OutboundMessage::Response(resp)).await;
                 
             }
