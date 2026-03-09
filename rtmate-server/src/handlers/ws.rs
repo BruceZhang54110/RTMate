@@ -57,12 +57,13 @@ pub async fn ws_handler(
     })
 }
 
-async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
+async fn process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
     // 分离发送和接收, 以便同时处理, sink 独占写权限, stream 独占读权限
     let (mut sink, mut stream) = ws.split();
-    let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100); 
+    let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100);
+    let mut authed_client_id: Option<Arc<String>> = None;
     // 后端消息发送到客户端
-    let mut _task = tokio::spawn(async move {
+    let send_task = tokio::spawn(async move {
         while let Some(out_msg) = rx.recv().await {
             let ws_msg = match out_msg {
                 OutboundMessage::Response(resp) => {
@@ -81,36 +82,69 @@ async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
         }
     });
     // 接收websocket 消息
-    loop {
+    let close_reason = loop {
         match stream.next().await {
             Some(Ok(ws::Message::Text(s))) => {
                 let websocket_msg = s.to_string();
                 let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg, tx.clone())
                     .await
                     .unwrap_or_else(|e| e.into());
+
+                if authed_client_id.is_none() {
+                    if let Some(data) = &resp.data {
+                        if resp.code == 200 {
+                            if let WsData::Auth(auth_data) = data {
+                                if auth_data.state {
+                                    authed_client_id = Some(Arc::new(auth_data.client_id.clone()));
+                                }
+                            }
+                        }
+                    }
+                }
                 // 通过通道发送websocket消息给客户端
-                let _ = tx.send(OutboundMessage::Response(resp)).await;
-                
+                if tx.send(OutboundMessage::Response(resp)).await.is_err() {
+                    break "send_channel_closed";
+                }
             }
             Some(Ok(ws::Message::Ping(ping_byte))) => {
                 if let Err(e) = tx.send(OutboundMessage::Raw(Message::Pong(ping_byte))).await {
                     debug!("failed to send Pong message from server: {e}");
-                    break;
+                    break "pong_send_failed";
                 }
             }
             Some(Ok(ws::Message::Close(_))) => {
                 debug!("Received close message from client. Connection will be closed.");
-                break;
+                break "client_close";
             }
             Some(Ok(_)) => {}
             Some(Err(e)) => {
                 debug!("client disconnected abruptly: {e}");
-                break;
+                break "stream_error";
             }
-            None => break,
+            None => {
+                break "stream_ended";
+            }
         }
+    };
+
+    // 关通道
+    drop(tx);
+    // 停掉任务
+    send_task.abort();
+
+    if let Some(client_id) = authed_client_id {
+        web_context.connection_manager.remove_connection(&client_id);
+        tracing::info!(
+            client_id = %client_id,
+            close_reason = close_reason,
+            "websocket closed and cleaned up"
+        );
+    } else {
+        tracing::info!(
+            close_reason = close_reason,
+            "websocket closed without authenticated client"
+        );
     }
-    
 }
 
 /// 处理websocket  客户端传入的消息
