@@ -8,6 +8,8 @@ use serde::Deserializer;
 pub enum RequestEvent {
     Auth(AuthPayload),
     Subscribe(SubscribePayload),
+    Unsubscribe(UnsubscribePayload),
+    Publish(PublishPayload),
     MessageSend(MessageSendPayload),
 }
 
@@ -43,6 +45,19 @@ pub struct SubscribePayload {
     // 主题
     #[serde(skip_serializing_if = "Option::is_none")]
     pub topic: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnsubscribePayload {
+    pub channel_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PublishPayload {
+    pub channel_id: String,
+    pub data: serde_json::Value,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

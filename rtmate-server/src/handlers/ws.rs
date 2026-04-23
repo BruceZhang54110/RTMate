@@ -8,6 +8,7 @@ use rtmate_common::response_common::RtResponse;
 use crate::handlers::auth;
 use crate::req::{RequestParam, RequestEvent};
 use crate::common::{RtWsError, WsBizCode};
+use crate::services::pubsub::PubSubService;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::mpsc;
 use futures_util::{SinkExt, StreamExt};
@@ -86,7 +87,7 @@ async fn process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
         match stream.next().await {
             Some(Ok(ws::Message::Text(s))) => {
                 let websocket_msg = s.to_string();
-                let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg, tx.clone())
+                let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg, tx.clone(), authed_client_id.clone())
                     .await
                     .unwrap_or_else(|e| e.into());
 
@@ -148,25 +149,58 @@ async fn process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
 }
 
 /// 处理websocket  客户端传入的消息
-pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str, ws_sender: Sender<OutboundMessage>) -> Result<RtResponse<WsData>, RtWsError> {
+pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str, ws_sender: Sender<OutboundMessage>, authed_client_id: Option<Arc<String>>) -> Result<RtResponse<WsData>, RtWsError> {
     // 1. 解析 JSON -> 业务错误
     let param: RequestParam = serde_json::from_str(websocket_msg)
         .map_err(|_| RtWsError::biz(WsBizCode::InvalidParams))?;
     // 2. 分发事件并得到领域结果
-    let ws_data = process_event(web_context, param.event, ws_sender).await?;
+    let ws_data = process_event(web_context, param.event, ws_sender, authed_client_id).await?;
     // 3. 成功统一包装
     Ok(RtResponse::ok_with_data(ws_data))
 }
 
 async fn process_event(web_context: Arc<WebContext>
     , event: RequestEvent
-    , ws_sender:Sender<OutboundMessage>) -> Result<WsData, RtWsError> {
+    , _ws_sender: Sender<OutboundMessage>
+    , authed_client_id: Option<Arc<String>>
+) -> Result<WsData, RtWsError> {
     match event {
         RequestEvent::Auth(payload) => {
-            let data = auth::handle_auth_and_register(web_context, payload, ws_sender).await?;
+            let data = auth::handle_auth_and_register(web_context, payload, _ws_sender).await?;
             Ok(WsData::Auth(data))
         }
-        // TODO: 未来新增事件，在此直接返回 WsData
-        _ => Err(RtWsError::biz(WsBizCode::UnsupportedEvent)),
+        RequestEvent::Subscribe(payload) => {
+            let client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
+            let result = PubSubService::subscribe(
+                &web_context.connection_manager,
+                &client_id,
+                &payload.channel_id,
+            )?;
+            Ok(WsData::Message(serde_json::json!({
+                "channel_id": result.channel_id,
+                "client_id": result.client_id,
+            })))
+        }
+        RequestEvent::Unsubscribe(payload) => {
+            let client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
+            let result = PubSubService::unsubscribe(
+                &web_context.connection_manager,
+                &client_id,
+                &payload.channel_id,
+            )?;
+            Ok(WsData::Message(serde_json::json!({
+                "channel_id": result.channel_id,
+            })))
+        }
+        RequestEvent::Publish(_payload) => {
+            // 终端客户端无权发布消息
+            Err(RtWsError::biz(WsBizCode::NoPublishPermission))
+        }
+        RequestEvent::MessageSend(payload) => {
+            // messageSend 视为终端客户端尝试发布，同样拒绝
+            let _client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
+            tracing::warn!(client_id = %_client_id, channel_id = %payload.channel_id, "Terminal client attempted to send message via MessageSend");
+            Err(RtWsError::biz(WsBizCode::NoPublishPermission))
+        }
     }
 }

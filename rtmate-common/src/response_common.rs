@@ -8,6 +8,16 @@ pub struct RtResponse<T> {
     pub data: Option<T>,
 }
 
+impl<T: Clone> Clone for RtResponse<T> {
+    fn clone(&self) -> Self {
+        Self {
+            code: self.code,
+            message: self.message.clone(),
+            data: self.data.clone(),
+        }
+    }
+}
+
 impl<T> RtResponse<T> {
 
     /// 创建一个带数据的业务成功响应

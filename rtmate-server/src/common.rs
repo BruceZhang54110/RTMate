@@ -24,6 +24,8 @@ pub enum WsBizCode {
     ClientNotActive,
     ChannelNotFound,
     NotSubscribed,
+    NoPublishPermission,
+    AlreadySubscribed,
 }
 
 impl WsBizCode {
@@ -41,6 +43,8 @@ impl WsBizCode {
             WsBizCode::ClientNotActive => 422,
             WsBizCode::ChannelNotFound => 424,
             WsBizCode::NotSubscribed => 431,
+            WsBizCode::NoPublishPermission => 403,
+            WsBizCode::AlreadySubscribed => 409,
         }
     }
     pub fn message(self) -> &'static str {
@@ -56,7 +60,9 @@ impl WsBizCode {
             WsBizCode::UnsupportedEvent => "不支持的事件类型",
             WsBizCode::ClientNotActive => "客户端连接未找到或已断开",
             WsBizCode::ChannelNotFound => "频道不存在",
-            WsBizCode::NotSubscribed => "未订阅"
+            WsBizCode::NotSubscribed => "未订阅",
+            WsBizCode::NoPublishPermission => "无发布权限",
+            WsBizCode::AlreadySubscribed => "已订阅"
         }
     }
 }

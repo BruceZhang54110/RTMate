@@ -8,6 +8,7 @@ pub mod bootstrap;
 pub mod handlers;
 pub mod routes;
 pub mod manager;
+pub mod services;
 
 
 #[cfg(test)]
