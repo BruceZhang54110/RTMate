@@ -21,10 +21,12 @@ pub struct AppAuthResult {
     pub app_id: String,
     pub access_token: String,
     pub connect_token: String,
+    // 设备终端的终端ID
+    pub client_id: String,
 }
 
 impl AppAuthResult {
-    pub fn new(app_id: String, access_token: String, connect_token: String) -> Self {
-        AppAuthResult { app_id, access_token, connect_token }
+    pub fn new(app_id: String, access_token: String, connect_token: String, client_id: String) -> Self {
+        AppAuthResult { app_id, access_token, connect_token, client_id }
     }
 }
