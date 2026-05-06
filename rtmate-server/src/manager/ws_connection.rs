@@ -34,10 +34,12 @@ pub struct ConnectionManager {
     connections: DashMap<ClientId, Arc<ClientConnection>>,
     // 保存每个租户下的客户端
     app_connections: DashMap<AppId, ClientIdSet>,
-    /// 频道
+    /// 频道运行时实例
     channels: DashMap<ChannelId, DashMap<ClientId, Arc<ClientConnection>>>,
     /// 每个客户端订阅的频道
-    subscriptions: DashMap<ClientId, ChannelSet>
+    subscriptions: DashMap<ClientId, ChannelSet>,
+    /// 已注册频道定义（由管理员预置）
+    known_channels: DashSet<ChannelId>,
 
 }
 
@@ -47,7 +49,8 @@ impl ConnectionManager {
             connections: DashMap::new(),
             app_connections: DashMap::new(),
             channels: DashMap::new(),
-            subscriptions: DashMap::new()
+            subscriptions: DashMap::new(),
+            known_channels: DashSet::new(),
         }
     }
 
@@ -126,7 +129,7 @@ impl ConnectionManager {
     }
 
     /// 订阅频道
-    fn subscribe(&self, client_id: ClientId, channel_id: ChannelId) -> Result<(), RtWsError> {
+    pub fn subscribe(&self, client_id: ClientId, channel_id: ChannelId) -> Result<(), RtWsError> {
         let conn_arc = match self.connections.get(&client_id) {
             Some(entry) => entry.value().clone(),
             None => return Err(RtWsError::biz(WsBizCode::ClientNotActive)),
@@ -149,7 +152,7 @@ impl ConnectionManager {
     }
 
     /// 取消订阅
-    fn un_subscribe(&self, client_id: ClientId, channel_id: ChannelId) -> Result<(), RtWsError> {
+    pub fn un_subscribe(&self, client_id: ClientId, channel_id: ChannelId) -> Result<(), RtWsError> {
         let should_cleanup = {
             let mut inner_map_entry = match self.channels.get_mut(&channel_id) {
                 Some(entry) => entry,
@@ -179,6 +182,51 @@ impl ConnectionManager {
         }
         tracing::info!("Client '{}' unsubscribed from channel '{}'.", client_id, channel_id);
         Ok(())
+    }
+
+    /// 广播消息到频道内所有订阅者
+    pub async fn broadcast(&self, channel_id: &ChannelId, message: OutboundMessage) -> (usize, usize) {
+        let mut delivered = 0;
+        let mut failed = 0;
+        
+        if let Some(subscribers) = self.channels.get(channel_id) {
+            for entry in subscribers.iter() {
+                let conn = entry.value();
+                match conn.sender.send(message.clone()).await {
+                    Ok(_) => delivered += 1,
+                    Err(e) => {
+                        tracing::warn!(client_id = %conn.client_id, channel_id = %channel_id, "Failed to deliver message: {}", e);
+                        failed += 1;
+                    }
+                }
+            }
+        }
+        
+        (delivered, failed)
+    }
+
+    /// 获取频道订阅者数量
+    pub fn get_channel_subscribers_count(&self, channel_id: &ChannelId) -> usize {
+        self.channels.get(channel_id)
+            .map(|subscribers| subscribers.len())
+            .unwrap_or(0)
+    }
+
+    /// 注册频道定义（由管理员调用）
+    pub fn register_channel(&self, channel_id: ChannelId) {
+        self.known_channels.insert(channel_id);
+    }
+
+    /// 检查频道是否已注册
+    pub fn is_channel_exists(&self, channel_id: &ChannelId) -> bool {
+        self.known_channels.contains(channel_id)
+    }
+
+    /// 检查客户端是否已订阅指定频道
+    pub fn is_subscribed(&self, client_id: &ClientId, channel_id: &ChannelId) -> bool {
+        self.subscriptions.get(client_id)
+            .map(|set| set.contains(channel_id))
+            .unwrap_or(false)
     }
 
     // 获取连接池连接数

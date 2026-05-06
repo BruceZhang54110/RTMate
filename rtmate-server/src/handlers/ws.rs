@@ -8,14 +8,10 @@ use rtmate_common::response_common::RtResponse;
 use crate::handlers::auth;
 use crate::req::{RequestParam, RequestEvent};
 use crate::common::{RtWsError, WsBizCode};
+use crate::services::pubsub::PubSubService;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::mpsc;
 use futures_util::{SinkExt, StreamExt};
-
-enum ConnectKind {
-    Connect(String),
-    Reconnect(String)
-}
 
 pub async fn ws_handler(
     State(web_context): State<Arc<WebContext>>,
@@ -62,11 +58,13 @@ pub async fn ws_handler(
     })
 }
 
-async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
+async fn process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
+    // 分离发送和接收, 以便同时处理, sink 独占写权限, stream 独占读权限
     let (mut sink, mut stream) = ws.split();
-    let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100); 
-    // 后台消息发送
-    let mut _task = tokio::spawn(async move {
+    let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100);
+    let mut authed_client_id: Option<Arc<String>> = None;
+    // 后端消息发送到客户端
+    let send_task = tokio::spawn(async move {
         while let Some(out_msg) = rx.recv().await {
             let ws_msg = match out_msg {
                 OutboundMessage::Response(resp) => {
@@ -78,62 +76,131 @@ async fn process_websocket(mut ws: WebSocket, web_context: Arc<WebContext>) {
                 OutboundMessage::Raw(raw) => raw,
                 
             };
+            // 发送消息给客户端
             if (sink.send(ws_msg)).await.is_err() {
                 break;
             }
         }
     });
-    loop {
+    // 接收websocket 消息
+    let close_reason = loop {
         match stream.next().await {
             Some(Ok(ws::Message::Text(s))) => {
                 let websocket_msg = s.to_string();
-                let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg, tx.clone())
+                let resp: RtResponse<WsData> = handle_msg(web_context.clone(), &websocket_msg, tx.clone(), authed_client_id.clone())
                     .await
                     .unwrap_or_else(|e| e.into());
-                let _ = tx.send(OutboundMessage::Response(resp)).await;
-                
+
+                if authed_client_id.is_none() {
+                    if let Some(data) = &resp.data {
+                        if resp.code == 200 {
+                            if let WsData::Auth(auth_data) = data {
+                                if auth_data.state {
+                                    authed_client_id = Some(Arc::new(auth_data.client_id.clone()));
+                                }
+                            }
+                        }
+                    }
+                }
+                // 通过通道发送websocket消息给客户端
+                if tx.send(OutboundMessage::Response(resp)).await.is_err() {
+                    break "send_channel_closed";
+                }
             }
             Some(Ok(ws::Message::Ping(ping_byte))) => {
                 if let Err(e) = tx.send(OutboundMessage::Raw(Message::Pong(ping_byte))).await {
                     debug!("failed to send Pong message from server: {e}");
-                    break;
+                    break "pong_send_failed";
                 }
             }
             Some(Ok(ws::Message::Close(_))) => {
                 debug!("Received close message from client. Connection will be closed.");
-                break;
+                break "client_close";
             }
             Some(Ok(_)) => {}
             Some(Err(e)) => {
                 debug!("client disconnected abruptly: {e}");
-                break;
+                break "stream_error";
             }
-            None => break,
+            None => {
+                break "stream_ended";
+            }
         }
+    };
+
+    // 关通道
+    drop(tx);
+    // 停掉任务
+    send_task.abort();
+
+    if let Some(client_id) = authed_client_id {
+        web_context.connection_manager.remove_connection(&client_id);
+        tracing::info!(
+            client_id = %client_id,
+            close_reason = close_reason,
+            "websocket closed and cleaned up"
+        );
+    } else {
+        tracing::info!(
+            close_reason = close_reason,
+            "websocket closed without authenticated client"
+        );
     }
-    
 }
 
 /// 处理websocket  客户端传入的消息
-pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str, ws_sender: Sender<OutboundMessage>) -> Result<RtResponse<WsData>, RtWsError> {
+pub async fn handle_msg(web_context: Arc<WebContext>, websocket_msg: &str, ws_sender: Sender<OutboundMessage>, authed_client_id: Option<Arc<String>>) -> Result<RtResponse<WsData>, RtWsError> {
     // 1. 解析 JSON -> 业务错误
     let param: RequestParam = serde_json::from_str(websocket_msg)
         .map_err(|_| RtWsError::biz(WsBizCode::InvalidParams))?;
     // 2. 分发事件并得到领域结果
-    let ws_data = process_event(web_context, param.event, ws_sender).await?;
+    let ws_data = process_event(web_context, param.event, ws_sender, authed_client_id).await?;
     // 3. 成功统一包装
     Ok(RtResponse::ok_with_data(ws_data))
 }
 
 async fn process_event(web_context: Arc<WebContext>
     , event: RequestEvent
-    , ws_sender:Sender<OutboundMessage>) -> Result<WsData, RtWsError> {
+    , _ws_sender: Sender<OutboundMessage>
+    , authed_client_id: Option<Arc<String>>
+) -> Result<WsData, RtWsError> {
     match event {
         RequestEvent::Auth(payload) => {
-            let data = auth::handle_auth_and_register(web_context, payload, ws_sender).await?;
+            let data = auth::handle_auth_and_register(web_context, payload, _ws_sender).await?;
             Ok(WsData::Auth(data))
         }
-        // TODO: 未来新增事件，在此直接返回 WsData
-        _ => Err(RtWsError::biz(WsBizCode::UnsupportedEvent)),
+        RequestEvent::Subscribe(payload) => {
+            let client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
+            let result = PubSubService::subscribe(
+                &web_context.connection_manager,
+                &client_id,
+                &payload.channel_id,
+            )?;
+            Ok(WsData::Message(serde_json::json!({
+                "channel_id": result.channel_id,
+                "client_id": result.client_id,
+            })))
+        }
+        RequestEvent::Unsubscribe(payload) => {
+            let client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
+            let result = PubSubService::unsubscribe(
+                &web_context.connection_manager,
+                &client_id,
+                &payload.channel_id,
+            )?;
+            Ok(WsData::Message(serde_json::json!({
+                "channel_id": result.channel_id,
+            })))
+        }
+        RequestEvent::Publish(_payload) => {
+            // 终端客户端无权发布消息
+            Err(RtWsError::biz(WsBizCode::NoPublishPermission))
+        }
+        RequestEvent::MessageSend(payload) => {
+            // messageSend 视为终端客户端尝试发布，同样拒绝
+            let _client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
+            tracing::warn!(client_id = %_client_id, channel_id = %payload.channel_id, "Terminal client attempted to send message via MessageSend");
+            Err(RtWsError::biz(WsBizCode::NoPublishPermission))
+        }
     }
 }

@@ -3,6 +3,7 @@ use serde::Deserialize;
 use axum::extract::ws::Message;
 use rtmate_common::response_common::RtResponse;
 
+#[derive(Clone)]
 pub enum OutboundMessage {
     /// 业务响应，需要序列化为JSON
     Response(RtResponse<WsData>),
@@ -11,7 +12,7 @@ pub enum OutboundMessage {
 }
 
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 pub struct AuthResponse {
     pub state: bool,
     pub client_id: String,
@@ -25,12 +26,12 @@ impl AuthResponse {
 }
 
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum WsData {
-
     Auth(AuthResponse),
     Connect(AuthResponse),
+    Message(serde_json::Value),
 }
 
 #[derive(Debug, Deserialize)]

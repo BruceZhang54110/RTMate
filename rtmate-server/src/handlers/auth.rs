@@ -1,10 +1,9 @@
 use jsonwebtoken::TokenData;
 use rtmate_common::models::RtClientConnection;
-use rtmate_common::response_common::RtResponse;
 use tokio::sync::mpsc::Sender;
 use crate::common::{RtWsError, WsBizCode};
 use crate::dao_query::DaoQuery;
-use crate::dto::{AuthResponse, WsData, OutboundMessage};
+use crate::dto::{AuthResponse, OutboundMessage};
 use crate::manager::ClientConnection;
 use crate::req::{AuthPayload};
 use jsonwebtoken::{DecodingKey, Validation, Algorithm};
@@ -29,13 +28,9 @@ pub async fn handle_auth_and_register(web_context: Arc<WebContext>
          -> Result<AuthResponse, RtWsError> {
     let auth_result = validate_client(web_context.clone(), payload).await?;
     tracing::info!("app_id: [{}], client_id: [{}]认证通过", &auth_result.app_id, &auth_result.client_id);
-    // Ok(AuthResponse::new(true, client_id))
     let client_id = auth_result.client_id.clone();
+    // 认证通过，注册到连接池
     auth::register_connection(web_context.clone(), auth_result, ws_sender).await?;
-    if let Some(conn) = web_context.connection_manager.get_connection(&client_id) {
-        let msg = RtResponse::ok_with_data(WsData::Auth(AuthResponse::new(false, client_id.clone())));
-        let _ = conn.sender.send(OutboundMessage::Response(msg)).await.is_ok();
-    }
     Ok(AuthResponse::new(true, client_id))
 }
 

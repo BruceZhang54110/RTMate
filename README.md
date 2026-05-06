@@ -5,6 +5,8 @@ Minimal realtime WebSocket core (Rust + Axum). Auth today → Channels / Presenc
 
 </div>
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/BruceZhang54110/RTMate)
+
 > Status: Early preview (NOT production ready).
 
 ## 为什么 / Why
