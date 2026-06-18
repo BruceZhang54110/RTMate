@@ -17,6 +17,7 @@ async fn test_publish(
     let data = payload.get("data").cloned().unwrap_or(Value::Null);
     match crate::services::pubsub::PubSubService::publish(
         &web_context.connection_manager,
+        &web_context.broadcast_manager,
         &channel_id,
         data,
     ).await {

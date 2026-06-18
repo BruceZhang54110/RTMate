@@ -2,6 +2,7 @@ use serde::Serialize;
 use serde::Deserialize;
 use axum::extract::ws::Message;
 use rtmate_common::response_common::RtResponse;
+use chrono::{DateTime, Utc};
 
 #[derive(Clone)]
 pub enum OutboundMessage {
@@ -9,6 +10,16 @@ pub enum OutboundMessage {
     Response(RtResponse<WsData>),
     /// 原生websocket消息
     Raw(Message),
+}
+
+/// 内部广播 channel 中传输的消息单元。
+/// 包装了最终要发送给客户端的 OutboundMessage，并附加广播所需的元数据。
+#[derive(Clone)]
+pub struct BroadcastMessage {
+    pub channel_id: String,
+    pub payload: OutboundMessage,
+    pub published_at: DateTime<Utc>,
+    pub sequence: u64,
 }
 
 

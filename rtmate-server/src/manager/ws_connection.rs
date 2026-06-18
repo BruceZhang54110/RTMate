@@ -184,27 +184,6 @@ impl ConnectionManager {
         Ok(())
     }
 
-    /// 广播消息到频道内所有订阅者
-    pub async fn broadcast(&self, channel_id: &ChannelId, message: OutboundMessage) -> (usize, usize) {
-        let mut delivered = 0;
-        let mut failed = 0;
-        
-        if let Some(subscribers) = self.channels.get(channel_id) {
-            for entry in subscribers.iter() {
-                let conn = entry.value();
-                match conn.sender.send(message.clone()).await {
-                    Ok(_) => delivered += 1,
-                    Err(e) => {
-                        tracing::warn!(client_id = %conn.client_id, channel_id = %channel_id, "Failed to deliver message: {}", e);
-                        failed += 1;
-                    }
-                }
-            }
-        }
-        
-        (delivered, failed)
-    }
-
     /// 获取频道订阅者数量
     pub fn get_channel_subscribers_count(&self, channel_id: &ChannelId) -> usize {
         self.channels.get(channel_id)

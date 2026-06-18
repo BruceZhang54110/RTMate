@@ -29,5 +29,29 @@ tracing-log = { workspace = true }
 dashmap = { workspace = true }
 futures-util = { workspace = true }
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[[test]]
+name = "broadcast_basic"
+path = "tests/integration/broadcast_basic.rs"
+
+[[test]]
+name = "broadcast_performance"
+path = "tests/integration/broadcast_performance.rs"
+
+[[test]]
+name = "broadcast_failure_isolation"
+path = "tests/integration/broadcast_failure_isolation.rs"
+
+[[test]]
+name = "ws_pubsub"
+path = "tests/integration/ws_pubsub.rs"
+
+[[bench]]
+name = "broadcast_bench"
+path = "benches/broadcast_bench.rs"
+harness = false
+
 
 

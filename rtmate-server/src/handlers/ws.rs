@@ -134,6 +134,7 @@ async fn process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
     send_task.abort();
 
     if let Some(client_id) = authed_client_id {
+        web_context.broadcast_manager.cleanup_client(&client_id);
         web_context.connection_manager.remove_connection(&client_id);
         tracing::info!(
             client_id = %client_id,
@@ -173,8 +174,10 @@ async fn process_event(web_context: Arc<WebContext>
             let client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
             let result = PubSubService::subscribe(
                 &web_context.connection_manager,
+                &web_context.broadcast_manager,
                 &client_id,
                 &payload.channel_id,
+                _ws_sender.clone(),
             )?;
             Ok(WsData::Message(serde_json::json!({
                 "channel_id": result.channel_id,
@@ -185,6 +188,7 @@ async fn process_event(web_context: Arc<WebContext>
             let client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
             let result = PubSubService::unsubscribe(
                 &web_context.connection_manager,
+                &web_context.broadcast_manager,
                 &client_id,
                 &payload.channel_id,
             )?;
