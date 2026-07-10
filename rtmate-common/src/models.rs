@@ -5,6 +5,7 @@ use diesel::Insertable;
 use serde::Deserialize;
 use serde::Serialize;
 use crate::schema::rt_app;
+use crate::schema::rt_channel;
 use crate::schema::rt_client_connection;
 use chrono::DateTime;
 
@@ -34,6 +35,33 @@ pub struct RtClientConnection {
     pub used: bool,
     pub created_time: Option<DateTime<Local>>,
     pub expire_time: Option<DateTime<Local>>,
+}
+
+#[derive(Queryable, Selectable, Deserialize, Serialize, Debug)]
+#[diesel(table_name = rt_channel)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct RtChannel {
+    pub id: i64,
+    pub app_id: i64,
+    pub app_id_str: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_by: Option<String>,
+    pub created_time: Option<DateTime<Local>>,
+    pub updated_time: Option<DateTime<Local>>,
+}
+
+#[derive(Insertable, Debug)]
+#[diesel(table_name = rt_channel)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewRtChannel {
+    pub app_id: i64,
+    pub app_id_str: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_by: Option<String>,
+    pub created_time: Option<DateTime<Local>>,
+    pub updated_time: Option<DateTime<Local>>,
 }
 
 #[derive(Insertable, Debug)]

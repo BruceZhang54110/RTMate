@@ -2,7 +2,8 @@ use serde::Serialize;
 use serde::Deserialize;
 use axum::extract::ws::Message;
 use rtmate_common::response_common::RtResponse;
-use chrono::{DateTime, Utc};
+use rtmate_common::models::RtChannel;
+use chrono::{DateTime, Local, Utc};
 
 #[derive(Clone)]
 pub enum OutboundMessage {
@@ -65,4 +66,55 @@ where
             Some(t) 
         }
     }))
+}
+
+/// 创建频道请求 DTO
+#[derive(Debug, Deserialize)]
+pub struct CreateChannelRequest {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+/// 字段级校验错误
+#[derive(Debug, Serialize)]
+pub struct FieldError {
+    pub field: String,
+    pub message: String,
+}
+
+/// 频道创建成功响应 DTO
+#[derive(Debug, Serialize)]
+pub struct CreateChannelResponse {
+    pub id: i64,
+    pub app_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_by: Option<String>,
+    pub created_time: Option<DateTime<Local>>,
+}
+
+impl From<RtChannel> for CreateChannelResponse {
+    fn from(channel: RtChannel) -> Self {
+        CreateChannelResponse {
+            id: channel.id,
+            app_id: channel.app_id_str,
+            name: channel.name,
+            description: channel.description,
+            created_by: channel.created_by,
+            created_time: channel.created_time,
+        }
+    }
+}
+
+/// 校验失败响应体
+#[derive(Debug, Serialize)]
+pub struct ValidationErrorResponse {
+    pub error: String,
+    pub details: Vec<FieldError>,
+}
+
+/// 通用错误响应体
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub error: String,
 }

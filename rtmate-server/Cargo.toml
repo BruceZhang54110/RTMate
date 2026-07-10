@@ -24,6 +24,8 @@ uuid = { workspace = true, features = ["v4"] }
 jsonwebtoken = { workspace = true }
 chrono = { workspace = true }
 diesel = { workspace = true, features = ["postgres", "chrono"]}
+async-trait = { workspace = true }
+base64 = "0.22"
 time = { workspace = true }
 tracing-log = { workspace = true }
 dashmap = { workspace = true }

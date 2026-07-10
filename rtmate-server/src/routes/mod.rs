@@ -2,7 +2,7 @@ use std::sync::Arc;
 use axum::{Router, routing::{any, post}, extract::{Path, State}, Json, http::StatusCode};
 use tower_http::trace::{DefaultMakeSpan, TraceLayer};
 use crate::web_context::WebContext;
-use crate::handlers::{ws_handler, handle_404};
+use crate::handlers::{ws_handler, handle_404, create_channel};
 use serde_json::Value;
 
 /// 测试用：后端发布消息到频道（自动注册不存在的频道）
@@ -36,6 +36,7 @@ pub fn build_router(web_context: Arc<WebContext>) -> Router {
     Router::new()
         .fallback(handle_404)
         .route("/ws", any(ws_handler))
+        .route("/api/channels", post(create_channel))
         .route("/api/channels/{channel_id}/publish", post(test_publish))
         .layer(
             TraceLayer::new_for_http()

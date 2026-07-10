@@ -1,5 +1,4 @@
 use tracing_subscriber::{EnvFilter, fmt, registry, prelude::*, layer::SubscriberExt};
-use tracing_log::LogTracer;
 use std::sync::Arc;
 use crate::web_context::WebContext;
 use tracing_subscriber::fmt::time::LocalTime;
