@@ -1724,6 +1724,7 @@ name = "rtmate-common"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "axum",
  "chrono",
  "config",
  "deadpool-diesel",
@@ -1734,6 +1735,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio-postgres",
+ "tracing",
 ]
 
 [[package]]

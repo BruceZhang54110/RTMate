@@ -5,6 +5,8 @@ use rtmate_common::response_common::RtResponse;
 use rtmate_common::models::RtChannel;
 use chrono::{DateTime, Local, Utc};
 
+pub use rtmate_common::common::ValidationErrorDetail;
+
 #[derive(Clone)]
 pub enum OutboundMessage {
     /// 业务响应，需要序列化为JSON
@@ -75,13 +77,6 @@ pub struct CreateChannelRequest {
     pub description: Option<String>,
 }
 
-/// 字段级校验错误
-#[derive(Debug, Serialize)]
-pub struct FieldError {
-    pub field: String,
-    pub message: String,
-}
-
 /// 频道创建成功响应 DTO
 #[derive(Debug, Serialize)]
 pub struct CreateChannelResponse {
@@ -106,15 +101,10 @@ impl From<RtChannel> for CreateChannelResponse {
     }
 }
 
-/// 校验失败响应体
+/// 测试发布接口响应 DTO
 #[derive(Debug, Serialize)]
-pub struct ValidationErrorResponse {
-    pub error: String,
-    pub details: Vec<FieldError>,
-}
-
-/// 通用错误响应体
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-    pub error: String,
+pub struct PublishResult {
+    pub channel_id: String,
+    pub delivered_count: usize,
+    pub failed_count: usize,
 }

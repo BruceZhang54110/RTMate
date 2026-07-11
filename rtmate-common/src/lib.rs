@@ -1,3 +1,4 @@
+pub mod common;
 pub mod dao;
 pub mod dto;
 pub mod response_common;

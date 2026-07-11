@@ -15,3 +15,5 @@ deadpool-diesel = { workspace = true, features = ["postgres"]}
 diesel = { workspace = true, features = ["postgres", "chrono"]}
 thiserror = { workspace = true }
 chrono = { workspace = true, features = ["serde"]}
+axum = { workspace = true }
+tracing = { workspace = true }

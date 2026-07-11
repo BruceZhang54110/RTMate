@@ -24,3 +24,7 @@ output.txt
 # Spec Kit generated artifacts
 specs/
 .specify
+
+
+CLAUDE.md
+rtmate-test-report.md

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Local;
 use rtmate_common::models::NewRtChannel;
 
-use crate::common::{RtWsError, WsBizCode};
+use crate::common::{AppError, BizError};
 use crate::domain::repositories::channel_repository_trait::ChannelRepositoryTrait;
 use crate::domain::repositories::rt_app_repository_trait::RtAppRepositoryTrait;
 use crate::dto::{CreateChannelRequest, CreateChannelResponse};
@@ -24,12 +24,12 @@ impl ChannelService {
         app_id: &str,
         client_id: &str,
         request: CreateChannelRequest,
-    ) -> Result<(CreateChannelResponse, bool), RtWsError> {
+    ) -> Result<(CreateChannelResponse, bool), AppError> {
         let rt_app = rt_app_repository
             .get_rt_app_by_app_id(app_id)
             .await
-            .map_err(|e| RtWsError::system("数据库查询失败", e))?
-            .ok_or_else(|| RtWsError::biz(WsBizCode::AppNotFound))?;
+            .map_err(AppError::from)?
+            .ok_or_else(|| AppError::from(BizError::AppNotFound))?;
 
         let name = request.name.trim().to_string();
         let description = request.description.map(|d| d.trim().to_string());
@@ -37,7 +37,7 @@ impl ChannelService {
         if let Some(existing) = channel_repository
             .find_by_app_and_name(rt_app.id, &name)
             .await
-            .map_err(|e| RtWsError::system("查询频道失败", e))?
+            .map_err(AppError::from)?
         {
             return Ok((CreateChannelResponse::from(existing), false));
         }
@@ -56,7 +56,7 @@ impl ChannelService {
         let created = channel_repository
             .create(new_channel)
             .await
-            .map_err(|e| RtWsError::system("创建频道失败", e))?;
+            .map_err(AppError::from)?;
 
         Ok((CreateChannelResponse::from(created), true))
     }
