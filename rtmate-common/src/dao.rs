@@ -10,22 +10,6 @@ use deadpool_diesel::Timeouts;
 use deadpool_diesel::postgres::Object;
 
 
-#[derive(Clone)]
-pub struct DaoContext {
-
-    // 数据源
-    pub dao: Dao,
-}
-
-impl DaoContext {
-    pub async fn new() -> anyhow::Result<Self> {
-        let dao = Dao::new().await?;
-        Ok(DaoContext { dao })
-    }
-
-}
-
-
 #[derive(Debug, Deserialize)]
 struct DbConfig {
 
@@ -113,26 +97,6 @@ impl DataSource {
 
     pub async fn get_connection(&self) -> anyhow::Result<Object> {
         let conn  = self.pool.get().await?;
-        Ok(conn)
-    }
-
-
-
-}
-
-#[derive(Clone)]
-pub struct Dao {
-    data_source: DataSource,
-}
-
-impl Dao {
-    pub async fn new() -> anyhow::Result<Self> {
-        let data_source = DataSource::new().await?;
-        Ok(Dao { data_source })
-    }
-
-    pub async fn get_connection(&self) -> anyhow::Result<Object> {
-        let conn  = self.data_source.pool.get().await?;
         Ok(conn)
     }
 

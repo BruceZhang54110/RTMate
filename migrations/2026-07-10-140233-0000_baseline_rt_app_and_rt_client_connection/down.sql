@@ -1,0 +1,3 @@
+-- Baseline migration down: intentionally a no-op.
+-- Dropping rt_app / rt_client_connection could destroy production data,
+-- so these tables must be removed manually if truly needed.

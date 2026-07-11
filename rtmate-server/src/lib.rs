@@ -1,6 +1,5 @@
 pub mod req;
 pub mod store;
-pub mod dao_query;
 pub mod common;
 pub mod dto;
 pub mod web_context;
@@ -9,6 +8,8 @@ pub mod handlers;
 pub mod routes;
 pub mod manager;
 pub mod services;
+pub mod domain;
+pub mod infrastructure;
 
 
 #[cfg(test)]

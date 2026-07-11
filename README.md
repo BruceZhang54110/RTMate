@@ -77,8 +77,12 @@ Error (token 过期示例):
 ## Crates
 `rtmate-server` (入口) · `rtmate-common` (DTO/响应/Claims) · `rtmate-auth` (认证实验)
 
+## Configuration
+
+- `BROADCAST_CHANNEL_CAPACITY`：每个频道广播 channel 的缓冲容量，默认 `1024`。容量满时旧消息会被丢弃，慢客户端可能触发 `Lagged`。
+
 ## Limitations
-Not production ready: 无频道 / 无 Presence / 无限流 / 无持久化 / 无安全强化。
+Not production ready: Presence / 限流 / 持久化 / 安全强化 仍在规划中。
 
 ## Contributing
 欢迎 Issue / PR。后续将补充 `CONTRIBUTING.md`。

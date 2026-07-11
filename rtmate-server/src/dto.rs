@@ -2,6 +2,10 @@ use serde::Serialize;
 use serde::Deserialize;
 use axum::extract::ws::Message;
 use rtmate_common::response_common::RtResponse;
+use rtmate_common::models::RtChannel;
+use chrono::{DateTime, Local, Utc};
+
+pub use rtmate_common::common::ValidationErrorDetail;
 
 #[derive(Clone)]
 pub enum OutboundMessage {
@@ -9,6 +13,16 @@ pub enum OutboundMessage {
     Response(RtResponse<WsData>),
     /// 原生websocket消息
     Raw(Message),
+}
+
+/// 内部广播 channel 中传输的消息单元。
+/// 包装了最终要发送给客户端的 OutboundMessage，并附加广播所需的元数据。
+#[derive(Clone)]
+pub struct BroadcastMessage {
+    pub channel_id: String,
+    pub payload: OutboundMessage,
+    pub published_at: DateTime<Utc>,
+    pub sequence: u64,
 }
 
 
@@ -54,4 +68,43 @@ where
             Some(t) 
         }
     }))
+}
+
+/// 创建频道请求 DTO
+#[derive(Debug, Deserialize)]
+pub struct CreateChannelRequest {
+    pub name: String,
+    pub description: Option<String>,
+}
+
+/// 频道创建成功响应 DTO
+#[derive(Debug, Serialize)]
+pub struct CreateChannelResponse {
+    pub id: i64,
+    pub app_id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub created_by: Option<String>,
+    pub created_time: Option<DateTime<Local>>,
+}
+
+impl From<RtChannel> for CreateChannelResponse {
+    fn from(channel: RtChannel) -> Self {
+        CreateChannelResponse {
+            id: channel.id,
+            app_id: channel.app_id_str,
+            name: channel.name,
+            description: channel.description,
+            created_by: channel.created_by,
+            created_time: channel.created_time,
+        }
+    }
+}
+
+/// 测试发布接口响应 DTO
+#[derive(Debug, Serialize)]
+pub struct PublishResult {
+    pub channel_id: String,
+    pub delivered_count: usize,
+    pub failed_count: usize,
 }

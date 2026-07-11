@@ -2,7 +2,6 @@ use jsonwebtoken::TokenData;
 use rtmate_common::models::RtClientConnection;
 use tokio::sync::mpsc::Sender;
 use crate::common::{RtWsError, WsBizCode};
-use crate::dao_query::DaoQuery;
 use crate::dto::{AuthResponse, OutboundMessage};
 use crate::manager::ClientConnection;
 use crate::req::{AuthPayload};
@@ -44,7 +43,7 @@ async fn validate_client(web_context: Arc<WebContext>, payload: AuthPayload)
 
     tracing::info!("认证请求 app_id: {}, token: {}", app_id, token);
     // 解码 token
-    let rt_app = web_context.dao.get_rt_app_by_app_id(&app_id)
+    let rt_app = web_context.rt_app_repository.get_rt_app_by_app_id(&app_id)
         .await
         .map_err(|e| RtWsError::system("数据库查询失败", e))?
         .ok_or_else(|| RtWsError::biz(WsBizCode::AppNotFound))?;
@@ -83,7 +82,7 @@ fn decode_token(token: &str, app_key: &str) -> Result<TokenData<Claims>, RtWsErr
 pub async fn check_connect_token(web_context: Arc<WebContext>, connect_token: &str) -> Result<RtClientConnection, RtWsError> {
     tracing::info!("校验 connect_token: {}", connect_token);
     // 从数据库中查询 connect_token 是否存在且未被使用
-    let rt_client_connection = web_context.dao.get_rt_client_connection_by_token(connect_token)
+    let rt_client_connection = web_context.client_connection_repository.get_rt_client_connection_by_token(connect_token)
         .await
         .map_err(|e| RtWsError::system("数据库查询失败", e))?
         .ok_or_else(|| RtWsError::biz(WsBizCode::InvalidConnectToken))?;
@@ -103,7 +102,7 @@ pub async fn check_connect_token(web_context: Arc<WebContext>, connect_token: &s
 
 pub async fn mark_connect_token_used(web_context: Arc<WebContext>, connect_token: &str) -> Result<(), RtWsError> {
     tracing::info!("标记 connect_token 为已使用: {}", connect_token);
-    web_context.dao.mark_connection_token_used(connect_token)
+    web_context.client_connection_repository.mark_connection_token_used(connect_token)
         .await
         .map_err(|e| RtWsError::system("数据库更新失败", e))?;
     Ok(())

@@ -1,4 +1,6 @@
 use rtmate_common::response_common::RtResponse;
+// 统一的 HTTP 错误类型从 rtmate-common 复用。
+pub use rtmate_common::common::{AppError, BizError, ValidationErrorDetail};
 use jsonwebtoken::errors::ErrorKind::*;
 
 #[derive(Debug, Clone, Copy)]
