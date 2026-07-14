@@ -45,6 +45,28 @@ impl ChannelRepositoryTrait for ChannelRepository {
         Ok(result)
     }
 
+    async fn find_by_app_id_str_and_name(
+        &self,
+        app_id_str_value: &str,
+        name_value: &str,
+    ) -> anyhow::Result<Option<RtChannel>> {
+        let pg_connection = self.data_source.get_connection().await?;
+        let app_id_str_value = app_id_str_value.to_owned();
+        let name_value = name_value.to_owned();
+        let result = pg_connection
+            .interact(move |conn| {
+                channel_dsl::rt_channel
+                    .filter(channel_dsl::app_id_str.eq(app_id_str_value))
+                    .filter(channel_dsl::name.eq(name_value))
+                    .select(RtChannel::as_select())
+                    .first::<RtChannel>(conn)
+                    .optional()
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("Query channel failed: {}", e))??;
+        Ok(result)
+    }
+
     async fn create(&self, new_channel: NewRtChannel) -> anyhow::Result<RtChannel> {
         let pg_connection = self.data_source.get_connection().await?;
         let app_id = new_channel.app_id;

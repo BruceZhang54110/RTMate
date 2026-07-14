@@ -35,11 +35,16 @@ pub async fn create_channel(
     )
     .await?;
 
+    // 4. 将创建的频道同步到运行时注册表，使 WebSocket 订阅与 HTTP 发布可识别
+    web_context
+        .connection_manager
+        .register_channel(Arc::new(response.name.clone()));
+
     Ok(Json(RtResponse::ok_with_data(response)))
 }
 
 /// 从 Authorization: Bearer <token> 中提取并校验 JWT
-async fn extract_and_validate_claims(
+pub(crate) async fn extract_and_validate_claims(
     web_context: &WebContext,
     headers: &HeaderMap,
 ) -> Result<Claims, AppError> {
@@ -79,7 +84,7 @@ async fn extract_and_validate_claims(
 }
 
 /// 不验证签名，仅从 JWT payload 中读取 app_id，用于先查数据库获取 app_key
-fn parse_app_id_from_token(token: &str) -> Option<String> {
+pub(crate) fn parse_app_id_from_token(token: &str) -> Option<String> {
     use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 
     let parts: Vec<&str> = token.split('.').collect();
@@ -95,7 +100,7 @@ fn parse_app_id_from_token(token: &str) -> Option<String> {
     Some(claims.app_id)
 }
 
-fn decode_token(token: &str, app_key: &str) -> anyhow::Result<TokenData<Claims>> {
+pub(crate) fn decode_token(token: &str, app_key: &str) -> anyhow::Result<TokenData<Claims>> {
     jsonwebtoken::decode::<Claims>(
         token,
         &DecodingKey::from_secret(app_key.as_ref()),

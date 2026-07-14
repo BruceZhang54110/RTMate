@@ -10,6 +10,13 @@ pub trait ChannelRepositoryTrait: Send + Sync {
         name: &str,
     ) -> anyhow::Result<Option<RtChannel>>;
 
+    /// 根据 app_id_str 与频道名称查询频道
+    async fn find_by_app_id_str_and_name(
+        &self,
+        app_id_str: &str,
+        name: &str,
+    ) -> anyhow::Result<Option<RtChannel>>;
+
     /// 创建新频道
     async fn create(&self, new_channel: NewRtChannel) -> anyhow::Result<RtChannel>;
 }
