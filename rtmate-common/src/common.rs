@@ -65,6 +65,8 @@ pub enum BizError {
     InvalidSignature,
     /// 未授权
     Unauthorized,
+    /// 频道不存在
+    ChannelNotFound,
 }
 
 impl From<BizError> for AppError {
@@ -91,6 +93,12 @@ impl From<BizError> for AppError {
             BizError::Unauthorized => AppError {
                 code: 401,
                 message: "未授权，请检查认证信息".to_string(),
+                data: None,
+                source: None,
+            },
+            BizError::ChannelNotFound => AppError {
+                code: 1006,
+                message: "频道不存在".to_string(),
                 data: None,
                 source: None,
             },
