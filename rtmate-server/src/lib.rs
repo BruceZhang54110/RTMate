@@ -1,5 +1,4 @@
 pub mod req;
-pub mod store;
 pub mod common;
 pub mod dto;
 pub mod web_context;
@@ -85,14 +84,6 @@ mod tests {
     }
 
     #[test]
-    fn test_store() {
-        let mut store = store::Store::new();
-        store.insert("app1".to_string(), "key1".to_string());
-        assert_eq!(store.get("app1"), Some(&"key1".to_string()));
-        assert_eq!(store.get("app2"), None);
-    }
-
-    #[test]
     fn test_auth_token() {
         use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
         use tracing_subscriber::util::SubscriberInitExt;
@@ -105,23 +96,13 @@ mod tests {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-        // 数据库存储app_id -> app_key
-        let mut store = store::Store::new();
-        let app_key = "af57761c55de41a7aef0a5e940f751af".to_string();
-        store.insert("abcdef".to_string(), app_key);
-
         let app_id = "abcdef".to_string();
         let state = "b1fe7836511f45a398e6206bbc4cd951".to_string();
-        // let timestamp= SystemTime::now()
-        //                     .duration_since(UNIX_EPOCH)
-        //                     .unwrap()
-        //                     .as_millis() as u64;
+        let app_key = "af57761c55de41a7aef0a5e940f751af".to_string();
         let timestamp: u64 = 1758891472000;
-        // 模拟客户端生成signature
-        let auth_data = format!("{}:{}:{}", &app_id, &state, &timestamp);
-        let app_key = store.get(&app_id)
-        .ok_or_else(|| anyhow::anyhow!("appId not found in store")).unwrap();
 
+        // 模拟客户端生成 signature
+        let auth_data = format!("{}:{}:{}", &app_id, &state, &timestamp);
         println!("appId:{} app_key: {}, timestamp: {}", app_id, app_key, timestamp);
         println!("auth_data: {}", auth_data);
 

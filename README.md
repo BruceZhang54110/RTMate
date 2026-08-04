@@ -1,7 +1,7 @@
 <div align="center">
 
 # RTMate
-Minimal realtime WebSocket core (Rust + Axum). Auth today → Channels / Presence soon.
+Minimal realtime WebSocket core (Rust + Axum). Single service with HTTP auth + WebSocket channels.
 
 </div>
 
@@ -17,6 +17,7 @@ RTMate 致力于成为一个轻量、可读、可扩展的实时服务内核：
 
 ## Features
 ✅ WebSocket `/ws` 握手 & auth 事件  
+✅ HTTP `POST /api/auth/token` 应用认证令牌签发  
 ✅ 统一响应结构 (code / message / data)  
 🛠 Subscribe / MessageSend (占位)  
 🛠 Channels & Broadcast  
@@ -30,8 +31,7 @@ RTMate 致力于成为一个轻量、可读、可扩展的实时服务内核：
 前置：Rust stable (>=1.79)。
 
 ```bash
-cd rtmate-server
-cargo run
+cargo run -p rtmate-server
 ```
 
 默认地址：`ws://127.0.0.1:3000/ws`
@@ -75,7 +75,7 @@ Error (token 过期示例):
 - Webhook skeleton
 
 ## Crates
-`rtmate-server` (入口) · `rtmate-common` (DTO/响应/Claims) · `rtmate-auth` (认证实验)
+`rtmate-server` (入口 + 认证 + 实时通信) · `rtmate-common` (DTO/响应/Claims)
 
 ## Configuration
 

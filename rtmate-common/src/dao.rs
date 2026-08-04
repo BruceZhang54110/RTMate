@@ -11,6 +11,7 @@ use deadpool_diesel::postgres::Object;
 
 
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DbConfig {
 
     #[serde()]

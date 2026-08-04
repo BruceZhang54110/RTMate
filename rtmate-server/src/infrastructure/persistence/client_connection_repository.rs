@@ -70,4 +70,20 @@ impl ClientConnectionRepositoryTrait for ClientConnectionRepository {
             .map_err(|e| anyhow::anyhow!("Insert rt_client_connection failed: {}", e))??;
         Ok(())
     }
+
+    async fn delete_rt_client_connection_by_connect_token(
+        &self,
+        connect_token: &str,
+    ) -> anyhow::Result<()> {
+        let pg_connection = self.data_source.get_connection().await?;
+        let connect_token_value = connect_token.to_owned();
+        pg_connection
+            .interact(move |conn: &mut diesel::PgConnection| {
+                diesel::delete(conn_dsl::rt_client_connection.filter(conn_dsl::connect_token.eq(connect_token_value)))
+                    .execute(conn)
+            })
+            .await
+            .map_err(|e| anyhow::anyhow!("Delete rt_client_connection failed: {}", e))??;
+        Ok(())
+    }
 }

@@ -72,7 +72,7 @@ async fn validate_client(web_context: Arc<WebContext>, payload: AuthPayload)
 
 /// jwt token 解码
 fn decode_token(token: &str, app_key: &str) -> Result<TokenData<Claims>, RtWsError> {
-    let token_data = jsonwebtoken::decode::<Claims>(&token
+    let token_data = jsonwebtoken::decode::<Claims>(token
         , &DecodingKey::from_secret(app_key.as_ref())
         , &Validation::new(Algorithm::HS256))?;
     Ok(token_data)
@@ -118,7 +118,7 @@ pub async fn register_connection(web_context: Arc<WebContext>
                 connection_manager.remove_connection(&client_id);
             }
             let conn = ClientConnection {
-                client_id: client_id,
+                client_id,
                 rt_app: auth_result.app_id.clone(),
                 connect_token: None,
                 sender: ws_sender

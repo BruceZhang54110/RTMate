@@ -11,9 +11,8 @@ RTMate 是一个 **WebSocket as a Service 的实时内核**，用 Rust 构建，
 - Web 框架：Axum（HTTP + WebSocket）
 - JSON 序列化：Serde
 - 多 crate 结构：
-  - `rtmate-server`：实时内核入口（WebSocket / 路由 / 连接管理）
+  - `rtmate-server`：实时内核入口 + HTTP 认证 + WebSocket / 路由 / 连接管理
   - `rtmate-common`：共享 DTO、错误类型、统一响应结构
-  - `rtmate-auth`：认证相关逻辑与实验
 
 如果你想把 RTMate 当作 Rust 教材，可以从三个问题入手：
 
@@ -154,7 +153,7 @@ RTMate 的对外协议采用统一的 JSON Envelope（见根目录 `README.md` �
 RTMate 采用的是典型的 Cargo workspace + 多 crate 结构：
 
 - 顶层 `Cargo.toml` 声明 workspace 成员：
-  - `rtmate-server`、`rtmate-common`、`rtmate-auth`
+  - `rtmate-server`、`rtmate-common`
 - 每个 crate 有自己的 `Cargo.toml` 与 `src/` 目录
 
 这种结构对于 Rust 学习者有两个好处：
@@ -163,7 +162,8 @@ RTMate 采用的是典型的 Cargo workspace + 多 crate 结构：
    - 能被多个 crate 使用的 DTO、错误类型，必须放在 `rtmate-common` 中
    - 这有助于培养“API/协议优先”的设计习惯
 2. **避免过度耦合**
-   - `rtmate-server` 不直接依赖 `rtmate-auth` 的内部细节，而是通过公共类型 / trait 交互
+   - 所有跨 crate 依赖都必须通过 `rtmate-common` 提供的公共类型与 trait 交互
+   - 认证逻辑现已合并进 `rtmate-server`；数据访问集中在 `infrastructure/persistence` 的 repository 层
    - 这与许多大型 Rust 服务在生产中的实践是一致的
 
 建议你对照：

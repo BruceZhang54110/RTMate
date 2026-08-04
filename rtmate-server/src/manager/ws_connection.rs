@@ -43,6 +43,12 @@ pub struct ConnectionManager {
 
 }
 
+impl Default for ConnectionManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConnectionManager {
     pub fn new() -> Self {
         ConnectionManager { 
@@ -75,7 +81,7 @@ impl ConnectionManager {
         });
         self.connections.insert(client_id_for_key.clone(), cc_arc);
         self.app_connections.entry(app_id)
-            .or_insert_with(DashSet::new)
+            .or_default()
             .insert(client_id_for_key.clone());
         client_id_for_key
     }
@@ -165,8 +171,7 @@ impl ConnectionManager {
                 drop(inner_map_entry); // // 明确释放锁
                 return Err(RtWsError::biz(WsBizCode::NotSubscribed));
             }
-            let is_empty = inner_map.is_empty();
-            is_empty
+            inner_map.is_empty()
         };
         if should_cleanup {
             self.channels.remove(&channel_id);

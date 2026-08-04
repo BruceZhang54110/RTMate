@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 rtmate-common = { path = "../rtmate-common"}
 
-axum = { workspace = true, features = ["http2", "ws", "tokio"] }
+axum = { workspace = true, features = ["http2", "ws", "tokio", "macros"] }
 axum-server = { workspace = true, features = ["tls-rustls"] }
 tokio = { workspace = true, features = ["full"] }
 # tokio-tungstenite = { workspace = true}
@@ -49,6 +49,14 @@ path = "tests/integration/broadcast_failure_isolation.rs"
 [[test]]
 name = "ws_pubsub"
 path = "tests/integration/ws_pubsub.rs"
+
+[[test]]
+name = "auth_integration"
+path = "tests/auth_integration.rs"
+
+[[test]]
+name = "auth_db_integration"
+path = "tests/auth_db_integration.rs"
 
 [[bench]]
 name = "broadcast_bench"
