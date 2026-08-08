@@ -108,3 +108,37 @@ pub struct PublishResult {
     pub delivered_count: usize,
     pub failed_count: usize,
 }
+
+/// 认证请求 DTO（与 `rtmate-auth` 原协议保持一致）
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RtAppParam {
+    /// 应用标识
+    pub app_id: String,
+    /// 随机状态字符串，防止重放攻击
+    pub state: String,
+    /// 请求时间戳，单位秒
+    pub timestamp: u64,
+    /// 请求签名
+    pub signature: String,
+}
+
+/// 认证成功响应 DTO（与 `rtmate-auth` 原协议保持一致）
+#[derive(Debug, Serialize)]
+pub struct AppAuthResult {
+    pub app_id: String,
+    pub access_token: String,
+    pub connect_token: String,
+    pub client_id: String,
+}
+
+impl AppAuthResult {
+    pub fn new(app_id: String, access_token: String, connect_token: String, client_id: String) -> Self {
+        Self {
+            app_id,
+            access_token,
+            connect_token,
+            client_id,
+        }
+    }
+}

@@ -64,7 +64,7 @@ pub(crate) async fn extract_and_validate_claims(
         .rt_app_repository
         .get_rt_app_by_app_id(&app_id)
         .await
-        .map_err(|e| AppError::from(e))?
+        .map_err(AppError::from)?
         .ok_or_else(|| AppError::from(BizError::AppNotFound))?;
 
     let token_data = decode_token(token, &rt_app.app_key)
