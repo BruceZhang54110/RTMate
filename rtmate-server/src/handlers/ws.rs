@@ -58,7 +58,8 @@ pub async fn ws_handler(
     })
 }
 
-async fn process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
+async fn 
+process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
     // 分离发送和接收, 以便同时处理, sink 独占写权限, stream 独占读权限
     let (mut sink, mut stream) = ws.split();
     let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100);
@@ -166,10 +167,6 @@ async fn process_event(web_context: Arc<WebContext>
     , authed_client_id: Option<Arc<String>>
 ) -> Result<WsData, RtWsError> {
     match event {
-        RequestEvent::Auth(payload) => {
-            let data = auth::handle_auth_and_register(web_context, payload, _ws_sender).await?;
-            Ok(WsData::Auth(data))
-        }
         RequestEvent::Subscribe(payload) => {
             let client_id = authed_client_id.ok_or_else(|| RtWsError::biz(WsBizCode::InvalidToken))?;
             let result = PubSubService::subscribe(

@@ -6,7 +6,7 @@ use serde::Deserializer;
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "event", content = "payload", rename_all = "camelCase")]
 pub enum RequestEvent {
-    Auth(AuthPayload),
+    // Auth(AuthPayload),
     Subscribe(SubscribePayload),
     Unsubscribe(UnsubscribePayload),
     Publish(PublishPayload),
