@@ -21,11 +21,11 @@ pub struct AuthResult {
 
 
 /// 处理应用认证，验证 jwt token
-pub async fn handle_auth_and_register(web_context: Arc<WebContext>
+pub async fn handle_auth_and_register_jwt_token(web_context: Arc<WebContext>
     , payload: AuthPayload
     , ws_sender: Sender<OutboundMessage>)
          -> Result<AuthResponse, RtWsError> {
-    let auth_result = validate_client(web_context.clone(), payload).await?;
+    let auth_result = validate_client_jwt_token(web_context.clone(), payload).await?;
     tracing::info!("app_id: [{}], client_id: [{}]认证通过", &auth_result.app_id, &auth_result.client_id);
     let client_id = auth_result.client_id.clone();
     // 认证通过，注册到连接池
@@ -33,8 +33,9 @@ pub async fn handle_auth_and_register(web_context: Arc<WebContext>
     Ok(AuthResponse::new(true, client_id))
 }
 
+
 /// 验证 jwt token
-async fn validate_client(web_context: Arc<WebContext>, payload: AuthPayload)
+async fn  validate_client_jwt_token(web_context: Arc<WebContext>, payload: AuthPayload)
          -> Result<AuthResult, RtWsError> {
     // 从数据库中获取 appKey
     tracing::info!("收到认证请求: {:?}", payload);
@@ -81,7 +82,7 @@ fn decode_token(token: &str, app_key: &str) -> Result<TokenData<Claims>, RtWsErr
 /// 校验 connect_token 的合法性
 pub async fn check_connect_token(web_context: Arc<WebContext>, connect_token: &str) -> Result<RtClientConnection, RtWsError> {
     tracing::info!("校验 connect_token: {}", connect_token);
-    // 从数据库中查询 connect_token 是否存在且未被使用
+    // 从数据库中查询 connect_token 是否存在且未被使用 
     let rt_client_connection = web_context.client_connection_repository.get_rt_client_connection_by_token(connect_token)
         .await
         .map_err(|e| RtWsError::system("数据库查询失败", e))?

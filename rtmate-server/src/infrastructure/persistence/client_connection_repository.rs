@@ -86,4 +86,5 @@ impl ClientConnectionRepositoryTrait for ClientConnectionRepository {
             .map_err(|e| anyhow::anyhow!("Delete rt_client_connection failed: {}", e))??;
         Ok(())
     }
+
 }

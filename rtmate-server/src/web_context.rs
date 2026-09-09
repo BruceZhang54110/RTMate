@@ -9,6 +9,7 @@ use crate::infrastructure::persistence::{
     ChannelRepository, ClientConnectionRepository, RtAppRepository,
 };
 use crate::manager::{BroadcastManager, ConnectionManager};
+use crate::services::auth_service::AuthService;
 
 #[derive(Clone)]
 pub struct WebContext {
@@ -17,6 +18,7 @@ pub struct WebContext {
     pub client_connection_repository: Arc<dyn ClientConnectionRepositoryTrait>,
     pub connection_manager: Arc<ConnectionManager>,
     pub broadcast_manager: Arc<BroadcastManager>,
+    pub auth_service: Arc<AuthService>
 }
 
 impl WebContext {
@@ -33,12 +35,16 @@ impl WebContext {
             .and_then(|v| v.parse::<usize>().ok())
             .unwrap_or(1024);
         let broadcast_manager = Arc::new(BroadcastManager::new(broadcast_capacity));
+
+        let auth_service = 
+            Arc::new(AuthService::new(client_connection_repository.clone(), connection_manager.clone()));
         Ok(WebContext {
             rt_app_repository,
             channel_repository,
             client_connection_repository,
             connection_manager,
             broadcast_manager,
+            auth_service
         })
     }
 }

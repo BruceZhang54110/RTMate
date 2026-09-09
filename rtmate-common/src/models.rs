@@ -28,6 +28,7 @@ pub struct RtApp {
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct RtClientConnection {
     pub id: i64,
+    // 关联rt_app 表
     pub app_id: i64,
     pub rt_app: String,
     pub client_id: String,

@@ -7,15 +7,58 @@ use hmac::{Hmac, Mac};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rtmate_common::dto::Claims;
 use rtmate_common::models::NewRtClientConnection;
+use crate::manager::ClientConnection;
 use rtmate_common::response_common::RtResponse;
 use sha2::Sha256;
 use uuid::Uuid;
-
 use crate::common::{AppError, BizError};
-use crate::dto::{AppAuthResult, RtAppParam};
+use crate::dto::{AppAuthResult, OutboundMessage, RtAppParam};
 use crate::web_context::WebContext;
+use crate::domain::repositories::client_connection_repository_trait::ClientConnectionRepositoryTrait;
+use crate::manager::ConnectionManager;
+use tokio::sync::mpsc::Sender;
+use crate::dto::AuthResponse;
+use crate::common::RtWsError;
 
 type HmacSha256 = Hmac<Sha256>;
+
+pub struct AuthService {
+    client_connection_repository: Arc<dyn ClientConnectionRepositoryTrait>,
+    connection_manager: Arc<ConnectionManager>
+}
+
+impl AuthService {
+    pub fn new(client_connection_repository: Arc<dyn ClientConnectionRepositoryTrait>
+        , connection_manager: Arc<ConnectionManager>) -> Self {
+        Self {
+            client_connection_repository,
+            connection_manager
+        }
+    }
+
+
+    /// 根据 connect_token 注册终端
+    pub async fn register_client(&self, connect_token: &str, ws_sender: Sender<OutboundMessage>) 
+        -> Result<AuthResponse, RtWsError> {
+        let rt_connection = 
+            self.client_connection_repository.get_rt_client_connection_by_token(connect_token).await
+            .map_err(|e| RtWsError::system("数据库查询失败", e))?
+            .ok_or_else(|| RtWsError::biz(crate::common::WsBizCode::InvalidConnectToken))?;
+        // 注册终端
+        let client_id = rt_connection.client_id.clone();
+        let rt_app = rt_connection.rt_app.clone();
+        let conn = ClientConnection {
+                rt_app: rt_connection.rt_app,
+                client_id: Arc::new(client_id.clone()),
+                connect_token: None,
+                sender: ws_sender          
+            };
+            self.connection_manager.add_connection(conn);
+            let app_connections_count = self.connection_manager.get_app_connections_count(Arc::new(rt_app));
+            tracing::info!("app:{}, client 连接数:{}", rt_connection.app_id, app_connections_count);
+        Ok(AuthResponse::new(true, client_id))
+    }
+}
 
 /// 使用 app_id 和 app_key 签发 access token 与 connect token。
 #[axum::debug_handler]

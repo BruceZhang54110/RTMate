@@ -3,13 +3,13 @@ use axum::{extract::{Query, State, ws::{self, CloseFrame, Message, WebSocket, We
 use axum::response::Response;
 use tracing::debug;
 use crate::web_context::WebContext;
-use crate::dto::{QueryParam, WsData, OutboundMessage};
+use crate::dto::{QueryParam, WsData, OutboundMessage, AuthResponse};
 use rtmate_common::response_common::RtResponse;
 use crate::handlers::auth;
 use crate::req::{RequestParam, RequestEvent};
 use crate::common::{RtWsError, WsBizCode};
 use crate::services::pubsub::PubSubService;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::mpsc;
 use futures_util::{SinkExt, StreamExt};
 
@@ -26,7 +26,7 @@ pub async fn ws_handler(
         Some(t) => t.to_string(),
         None => return StatusCode::UNAUTHORIZED.into_response(),
     };
-
+    // 校验connect_token
     let _rt_client_connection = match auth::check_connect_token(web_context.clone(), &connect_token).await {
         Ok(conn) => conn,
         Err(e) => {
@@ -42,6 +42,25 @@ pub async fn ws_handler(
 
     ws.on_upgrade(move|mut ws| async move {
         debug!("WebSocket connection established");
+        // 内部消息的发送和接收
+        let (tx, rx) = mpsc::channel::<OutboundMessage>(100);
+
+        // 根据 connect_token 注册客户端
+        let register_result: Result<AuthResponse, RtWsError> = web_context.auth_service.register_client(&connect_token, tx.clone()).await;
+        if let Err(e) = register_result {
+            let resp: RtResponse<WsData> = e.into();
+            tracing::warn!("register_client failed: code={}, msg={}", resp.code, resp.message);
+            if let Ok(resp_json) = serde_json::to_string(&resp) {
+                let _ = ws.send(Message::Text(resp_json.into())).await;
+                let close_msg = Message::Close(Some(CloseFrame {
+                    code: close_code::ERROR,
+                    reason: resp.message.into(),
+                }));
+                let _ = ws.send(close_msg).await;
+            } 
+            return;
+        }
+        tracing::debug!("连接成功, connect_token:{}", connect_token);
         // 将 connection_token 更新为已使用
         if let Err(e) =  auth::mark_connect_token_used(web_context.clone(), &connect_token).await {
             // 如果报错就关闭websocket
@@ -53,16 +72,17 @@ pub async fn ws_handler(
             let _ = ws.send(close_msg).await;
             return ;
         }
-        tracing::debug!("连接成功, connect_token:{}", connect_token);
-        process_websocket(ws, web_context).await;
+        process_websocket(ws, tx, rx, web_context).await;
     })
 }
 
-async fn 
-process_websocket(ws: WebSocket, web_context: Arc<WebContext>) {
+async fn process_websocket(ws: WebSocket
+        ,tx: Sender<OutboundMessage>,
+        mut rx: Receiver<OutboundMessage>
+        , web_context: Arc<WebContext>) {
     // 分离发送和接收, 以便同时处理, sink 独占写权限, stream 独占读权限
     let (mut sink, mut stream) = ws.split();
-    let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100);
+    // let (tx, mut rx) = mpsc::channel::<OutboundMessage>(100);
     let mut authed_client_id: Option<Arc<String>> = None;
     // 后端消息发送到客户端
     let send_task = tokio::spawn(async move {
